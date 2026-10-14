@@ -2,6 +2,14 @@ import React from "react";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { logoutAction } from "@/actions/auth";
+import { FluidNav } from "@/components/ui/fluid-nav";
+
+const ADMIN_NAV_ITEMS = [
+  { label: "Dashboard", href: "/admin", icon: "space_dashboard" },
+  { label: "Notes Library", href: "/admin/notes", icon: "menu_book" },
+  { label: "Excel Quiz Importer", href: "/admin/quizzes/new", icon: "upload_file" },
+  { label: "Student Roster", href: "/admin/students", icon: "group" },
+];
 
 export default async function AdminLayout({
   children,
@@ -17,8 +25,8 @@ export default async function AdminLayout({
         <div className="h-16 w-full px-6 flex items-center justify-between gap-6">
           {/* Logo with Admin Badge */}
           <div className="flex items-center gap-4">
-            <Link href="/admin" className="flex items-center gap-3">
-              <div className="relative w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-500 via-indigo-500 to-sky-400 p-[1px] shadow-[0_0_20px_rgba(244,63,94,0.4)]">
+            <Link href="/admin" className="flex items-center gap-3 group">
+              <div className="relative w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-500 via-indigo-500 to-sky-400 p-[1px] shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-transform duration-300 group-hover:scale-105">
                 <div className="w-full h-full rounded-[11px] bg-[#0c0e1a]/80 backdrop-blur-md flex items-center justify-center">
                   <span className="material-symbols-outlined text-rose-300 text-[20px]">
                     admin_panel_settings
@@ -41,37 +49,14 @@ export default async function AdminLayout({
             </Link>
           </div>
 
-          {/* Admin Navigation Pills */}
-          <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-full liquid-glass-subtle">
-            <Link
-              href="/admin"
-              className="px-4 py-1.5 liquid-pill-active text-white text-xs font-['Space_Grotesk'] font-semibold rounded-full transition-all"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/admin/notes"
-              className="px-4 py-1.5 text-xs font-['Space_Grotesk'] font-medium text-slate-300 hover:text-white hover:bg-white/[0.04] rounded-full transition-all"
-            >
-              Notes Library
-            </Link>
-            <Link
-              href="/admin/quizzes/new"
-              className="px-4 py-1.5 text-xs font-['Space_Grotesk'] font-medium text-slate-300 hover:text-white hover:bg-white/[0.04] rounded-full transition-all"
-            >
-              Excel Quiz Importer
-            </Link>
-            <Link
-              href="/admin/students"
-              className="px-4 py-1.5 text-xs font-['Space_Grotesk'] font-medium text-slate-300 hover:text-white hover:bg-white/[0.04] rounded-full transition-all"
-            >
-              Student Roster
-            </Link>
-          </nav>
+          {/* Dynamic Moving Admin Navigation Pills */}
+          <div className="hidden md:block">
+            <FluidNav items={ADMIN_NAV_ITEMS} />
+          </div>
 
           {/* Admin Profile & Logout */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-2.5 pl-1.5 pr-3 py-1 rounded-full liquid-glass-subtle">
+            <div className="flex items-center gap-2.5 pl-1.5 pr-3 py-1 rounded-full liquid-glass-subtle transition-all duration-200 hover:border-white/20">
               <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-rose-500 to-indigo-500 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.4)]">
                 <span className="material-symbols-outlined text-white text-[16px]">
                   security
@@ -85,7 +70,7 @@ export default async function AdminLayout({
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="w-9 h-9 rounded-full liquid-glass-subtle flex items-center justify-center text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-all"
+                className="w-9 h-9 rounded-full liquid-glass-subtle flex items-center justify-center text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-all duration-200 active:scale-90"
                 title="Sign Out"
               >
                 <span className="material-symbols-outlined text-[19px]">logout</span>

@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Ambient Canvas Backdrop
- * Fixed mesh/aurora radial gradients with blurred fluid light orbs for translucent glass refraction.
+ * Moving fluid light orbs with gentle floating and breathing animations for living liquid glass refraction.
  */
 export function AmbientBackdrop(): JSX.Element {
   return (
@@ -11,10 +11,10 @@ export function AmbientBackdrop(): JSX.Element {
       aria-hidden="true"
       className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
     >
-      <div className="absolute -top-40 -left-40 w-[640px] h-[640px] bg-gradient-to-br from-indigo-600/25 via-purple-600/15 to-transparent rounded-full blur-[130px]" />
-      <div className="absolute top-[20%] right-[-10%] w-[700px] h-[700px] bg-gradient-to-bl from-sky-500/15 via-indigo-500/15 to-transparent rounded-full blur-[150px]" />
-      <div className="absolute bottom-[-15%] left-[20%] w-[680px] h-[680px] bg-gradient-to-tr from-violet-600/20 via-fuchsia-600/10 to-transparent rounded-full blur-[160px]" />
-      <div className="absolute top-[45%] left-[45%] w-[450px] h-[450px] bg-gradient-to-r from-cyan-500/10 to-indigo-600/10 rounded-full blur-[140px]" />
+      <div className="animate-orb-1 absolute -top-40 -left-40 w-[640px] h-[640px] bg-gradient-to-br from-indigo-600/25 via-purple-600/15 to-transparent rounded-full blur-[130px]" />
+      <div className="animate-orb-2 absolute top-[20%] right-[-10%] w-[700px] h-[700px] bg-gradient-to-bl from-sky-500/15 via-indigo-500/15 to-transparent rounded-full blur-[150px]" />
+      <div className="animate-orb-3 absolute bottom-[-15%] left-[20%] w-[680px] h-[680px] bg-gradient-to-tr from-violet-600/20 via-fuchsia-600/10 to-transparent rounded-full blur-[160px]" />
+      <div className="animate-orb-pulse absolute top-[45%] left-[45%] w-[450px] h-[450px] bg-gradient-to-r from-cyan-500/10 to-indigo-600/10 rounded-full blur-[140px]" />
     </div>
   );
 }
@@ -26,8 +26,7 @@ export interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 /**
  * Liquid Glass Chrome & Cards
- * Frosted backdrop-blur-xl with specular inner border and refractive depth.
- * Applied to floating navbars, collapsible sidebars, KPI cards, timer pills, and dropzones.
+ * Frosted backdrop-blur-xl with specular inner border, shimmer on hover, and refractive depth.
  */
 export function GlassCard({
   children,
@@ -38,11 +37,11 @@ export function GlassCard({
   return (
     <div
       className={cn(
-        "rounded-2xl transition-all duration-200",
+        "rounded-2xl glass-shimmer transition-all duration-300",
         variant === "default" &&
-          "backdrop-blur-xl bg-white/10 dark:bg-slate-900/45 border border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),0_8px_32px_rgba(0,0,0,0.25)]",
+          "backdrop-blur-xl bg-white/10 dark:bg-slate-900/45 border border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),0_8px_32px_rgba(0,0,0,0.25)] hover:border-white/30 hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.45),0_12px_40px_rgba(0,0,0,0.35)]",
         variant === "subtle" &&
-          "backdrop-blur-xl bg-white/[0.04] dark:bg-slate-900/30 border border-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_4px_20px_rgba(0,0,0,0.3)]",
+          "backdrop-blur-xl bg-white/[0.04] dark:bg-slate-900/30 border border-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_4px_20px_rgba(0,0,0,0.3)] hover:bg-white/[0.06] hover:border-white/15",
         variant === "active" &&
           "backdrop-blur-xl bg-indigo-500/20 border border-indigo-300/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.45),0_0_20px_rgba(99,102,241,0.3)]",
         className

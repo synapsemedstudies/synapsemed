@@ -2,6 +2,15 @@ import React from "react";
 import Link from "next/link";
 import { requireStudent } from "@/lib/auth";
 import { logoutAction } from "@/actions/auth";
+import { FluidNav } from "@/components/ui/fluid-nav";
+import { InteractiveSidebarNav } from "@/components/ui/interactive-cards";
+
+const STUDENT_NAV_ITEMS = [
+  { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { label: "Notes Library", href: "/dashboard/notes", icon: "menu_book" },
+  { label: "Quiz Center", href: "/dashboard/quizzes", icon: "timer" },
+  { label: "Mistake Notebook", href: "/dashboard/mistakes", icon: "edit_note" },
+];
 
 export default async function StudentDashboardLayout({
   children,
@@ -17,8 +26,8 @@ export default async function StudentDashboardLayout({
         <div className="h-16 w-full px-6 flex items-center justify-between gap-6">
           {/* Logo */}
           <div className="flex items-center gap-6 shrink-0">
-            <Link href="/dashboard" className="flex items-center gap-3">
-              <div className="relative w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 p-[1px] shadow-[0_0_20px_rgba(99,102,241,0.5)]">
+            <Link href="/dashboard" className="flex items-center gap-3 group">
+              <div className="relative w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 p-[1px] shadow-[0_0_20px_rgba(99,102,241,0.5)] transition-transform duration-300 group-hover:scale-105">
                 <div className="w-full h-full rounded-[11px] bg-[#0c0e1a]/80 backdrop-blur-md flex items-center justify-center">
                   <span className="material-symbols-outlined text-sky-200 text-[21px]">
                     neurology
@@ -36,31 +45,14 @@ export default async function StudentDashboardLayout({
             </Link>
           </div>
 
-          {/* Navigation tabs with fluid pill indicator */}
-          <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-full liquid-glass-subtle">
-            <Link
-              href="/dashboard"
-              className="px-4 py-1.5 liquid-pill-active text-white text-xs font-['Space_Grotesk'] font-semibold rounded-full transition-all"
-            >
-              Medical Notes
-            </Link>
-            <Link
-              href="/dashboard/quizzes"
-              className="px-4 py-1.5 text-xs font-['Space_Grotesk'] font-medium text-slate-300 hover:text-white hover:bg-white/[0.04] rounded-full transition-all"
-            >
-              Quiz Center
-            </Link>
-            <Link
-              href="/dashboard/mistakes"
-              className="px-4 py-1.5 text-xs font-['Space_Grotesk'] font-medium text-slate-300 hover:text-white hover:bg-white/[0.04] rounded-full transition-all"
-            >
-              Mistake Notebook
-            </Link>
-          </nav>
+          {/* Dynamic Moving Parts: Smoothly Sliding Fluid Nav */}
+          <div className="hidden md:block">
+            <FluidNav items={STUDENT_NAV_ITEMS} />
+          </div>
 
           {/* User Profile & Actions */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-2.5 pl-1.5 pr-3 py-1 rounded-full liquid-glass-subtle">
+            <div className="flex items-center gap-2.5 pl-1.5 pr-3 py-1 rounded-full liquid-glass-subtle transition-all duration-200 hover:border-white/20">
               <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-sky-400 flex items-center justify-center shadow-[0_0_12px_rgba(129,140,248,0.5)]">
                 <span className="material-symbols-outlined text-white text-[16px]">
                   person
@@ -79,7 +71,7 @@ export default async function StudentDashboardLayout({
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="w-9 h-9 rounded-full liquid-glass-subtle flex items-center justify-center text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-all"
+                className="w-9 h-9 rounded-full liquid-glass-subtle flex items-center justify-center text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-all duration-200 active:scale-90"
                 title="Sign Out"
               >
                 <span className="material-symbols-outlined text-[19px]">logout</span>
@@ -89,7 +81,7 @@ export default async function StudentDashboardLayout({
         </div>
       </header>
 
-      {/* Left Sidebar (Medical Systems) */}
+      {/* Left Sidebar (Medical Systems with animated indicator) */}
       <aside className="fixed left-0 top-16 bottom-0 w-64 bg-[#07080f]/45 backdrop-blur-2xl z-40 flex flex-col p-4 border-r border-white/[0.07] shadow-[4px_0_30px_rgba(0,0,0,0.5)]">
         <div className="flex items-center justify-between mb-4 px-2">
           <span className="text-[11px] font-['Space_Grotesk'] font-bold text-slate-400 uppercase tracking-widest">
@@ -100,94 +92,7 @@ export default async function StudentDashboardLayout({
           </span>
         </div>
 
-        <nav className="flex-1 flex flex-col gap-1 overflow-y-auto pr-1">
-          <Link
-            href="/dashboard"
-            className="flex items-center justify-between px-3 py-2.5 rounded-xl liquid-pill-active text-white font-medium text-sm transition-all shadow-[0_4px_16px_rgba(99,102,241,0.2)]"
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[20px] text-sky-300">
-                cardiology
-              </span>
-              <span className="font-['Space_Grotesk'] font-semibold text-white">
-                Cardiovascular
-              </span>
-            </div>
-            <span className="text-[11px] font-['Space_Grotesk'] font-bold px-2 py-0.5 rounded-full bg-indigo-400/25 border border-indigo-300/30 text-sky-200">
-              38
-            </span>
-          </Link>
-
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[20px] text-slate-400">
-                air
-              </span>
-              <span className="text-sm font-normal">Pulmonology</span>
-            </div>
-            <span className="text-xs text-slate-500 font-medium">29</span>
-          </div>
-
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[20px] text-slate-400">
-                water_drop
-              </span>
-              <span className="text-sm font-normal">Nephrology</span>
-            </div>
-            <span className="text-xs text-slate-500 font-medium">24</span>
-          </div>
-
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[20px] text-slate-400">
-                psychology
-              </span>
-              <span className="text-sm font-normal">Neurology</span>
-            </div>
-            <span className="text-xs text-slate-500 font-medium">41</span>
-          </div>
-
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[20px] text-slate-400">
-                coronavirus
-              </span>
-              <span className="text-sm font-normal">Infectious Disease</span>
-            </div>
-            <span className="text-xs text-slate-500 font-medium">33</span>
-          </div>
-
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[20px] text-slate-400">
-                pill
-              </span>
-              <span className="text-sm font-normal">Pharmacology</span>
-            </div>
-            <span className="text-xs text-slate-500 font-medium">52</span>
-          </div>
-
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[20px] text-slate-400">
-                medical_services
-              </span>
-              <span className="text-sm font-normal">Surgery</span>
-            </div>
-            <span className="text-xs text-slate-500 font-medium">19</span>
-          </div>
-
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[20px] text-slate-400">
-                biotech
-              </span>
-              <span className="text-sm font-normal">Pathology</span>
-            </div>
-            <span className="text-xs text-slate-500 font-medium">46</span>
-          </div>
-        </nav>
+        <InteractiveSidebarNav />
 
         <div className="pt-3 border-t border-white/[0.08] flex flex-col">
           <div className="flex items-center justify-between px-3 py-2 rounded-xl text-slate-400 text-xs">

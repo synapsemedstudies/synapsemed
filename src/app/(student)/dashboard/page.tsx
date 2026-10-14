@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { GlassCard, ReadingSurface } from "@/components/ui/glass";
+import { InteractiveBookmarkButton } from "@/components/ui/interactive-cards";
 
 export default function StudentDashboardPage() {
   return (
@@ -75,7 +76,7 @@ export default function StudentDashboardPage() {
                 </span>
               </div>
               <div className="flex flex-col gap-1.5 text-sm">
-                <div className="flex items-center justify-between p-3 rounded-xl liquid-pill-active text-white font-medium cursor-pointer">
+                <div className="flex items-center justify-between p-3 rounded-xl liquid-pill-active text-white font-medium cursor-pointer transition-all hover:translate-x-1">
                   <span className="font-['Space_Grotesk'] text-xs font-semibold text-white tracking-wide">
                     Valvular Heart Disease
                   </span>
@@ -83,26 +84,26 @@ export default function StudentDashboardPage() {
                     9
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">
+                <div className="flex items-center justify-between p-3 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer hover:translate-x-1">
                   <span className="text-xs font-normal">Heart Failure &amp; GDMT</span>
                   <span className="text-xs text-slate-500 font-medium">11</span>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">
+                <div className="flex items-center justify-between p-3 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer hover:translate-x-1">
                   <span className="text-xs font-normal">Arrhythmias &amp; Conduction</span>
                   <span className="text-xs text-slate-500 font-medium">12</span>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer">
+                <div className="flex items-center justify-between p-3 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer hover:translate-x-1">
                   <span className="text-xs font-normal">Congenital Heart Defects</span>
                   <span className="text-xs text-slate-500 font-medium">6</span>
                 </div>
               </div>
             </GlassCard>
 
-            {/* Clinical Pearl Card */}
+            {/* Clinical Pearl Card with animated orb */}
             <GlassCard className="relative overflow-hidden p-5 group">
-              <div className="absolute -top-12 -right-12 w-32 h-32 bg-purple-500/15 rounded-full blur-2xl group-hover:bg-purple-500/25 transition-all" />
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl group-hover:bg-purple-500/30 group-hover:scale-125 transition-all duration-500" />
               <div className="flex items-center gap-2 mb-2 text-purple-300">
-                <span className="material-symbols-outlined text-[19px]">lightbulb</span>
+                <span className="material-symbols-outlined text-[19px] animate-pulse">lightbulb</span>
                 <span className="font-['Space_Grotesk'] text-[11px] font-bold uppercase tracking-wider">
                   Clinical Pearl
                 </span>
@@ -119,7 +120,7 @@ export default function StudentDashboardPage() {
           {/* Column Right (High-Yield Note Cards) */}
           <div className="lg:col-span-8 flex flex-col gap-4">
             {/* Note Card 1 */}
-            <GlassCard className="p-6 hover:border-white/20 transition-all duration-300 hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7),0_0_24px_rgba(129,140,248,0.15)] group">
+            <GlassCard className="p-6 hover:border-white/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7),0_0_24px_rgba(129,140,248,0.18)] group">
               <div className="flex items-center justify-between gap-3 mb-2.5">
                 <div className="flex items-center gap-2.5">
                   <span className="px-3 py-1 rounded-full liquid-pill-active text-indigo-200 font-['Space_Grotesk'] text-[11px] font-semibold">
@@ -133,20 +134,13 @@ export default function StudentDashboardPage() {
                     14 min read
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/[0.05]"
-                  title="Save Bookmark"
-                >
-                  <span className="material-symbols-outlined text-[20px]">bookmark_add</span>
-                </button>
+                <InteractiveBookmarkButton />
               </div>
 
               <h3 className="font-['Space_Grotesk'] font-bold text-xl text-white group-hover:text-indigo-200 transition-colors leading-snug">
                 Infective Endocarditis: Modified Duke Criteria &amp; Empiric Regimens
               </h3>
 
-              {/* High contrast reading snippet */}
               <ReadingSurface className="my-3 p-3.5 text-xs text-slate-200 bg-slate-900/80 border-slate-700/50 leading-relaxed">
                 Diagnostic criteria breakdown (Definite: 2 Major or 1 Major + 3 Minor criteria). Typical pathogens: S. viridans (dental), S. aureus (IV drug use - tricuspid valve), and Enterococcus. Native vs prosthetic valve empiric coverage.
               </ReadingSurface>
@@ -160,16 +154,18 @@ export default function StudentDashboardPage() {
                 </span>
                 <Link
                   href="/dashboard/notes"
-                  className="px-4 py-2 rounded-xl liquid-btn-primary text-white font-['Space_Grotesk'] text-xs font-semibold hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl liquid-btn-primary text-white font-['Space_Grotesk'] text-xs font-semibold flex items-center gap-1.5 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.5)]"
                 >
                   <span>View Note</span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  <span className="material-symbols-outlined text-[16px] transition-transform duration-200 group-hover:translate-x-1">
+                    arrow_forward
+                  </span>
                 </Link>
               </div>
             </GlassCard>
 
             {/* Note Card 2 */}
-            <GlassCard className="p-6 hover:border-white/20 transition-all duration-300 hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7),0_0_24px_rgba(129,140,248,0.15)] group">
+            <GlassCard className="p-6 hover:border-white/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7),0_0_24px_rgba(129,140,248,0.18)] group">
               <div className="flex items-center justify-between gap-3 mb-2.5">
                 <div className="flex items-center gap-2.5">
                   <span className="px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/35 text-purple-200 font-['Space_Grotesk'] text-[11px] font-semibold">
@@ -183,13 +179,7 @@ export default function StudentDashboardPage() {
                     18 min read
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/[0.05]"
-                  title="Save Bookmark"
-                >
-                  <span className="material-symbols-outlined text-[20px]">bookmark_add</span>
-                </button>
+                <InteractiveBookmarkButton />
               </div>
 
               <h3 className="font-['Space_Grotesk'] font-bold text-xl text-white group-hover:text-indigo-200 transition-colors leading-snug">
@@ -209,16 +199,18 @@ export default function StudentDashboardPage() {
                 </span>
                 <Link
                   href="/dashboard/notes"
-                  className="px-4 py-2 rounded-xl liquid-btn-primary text-white font-['Space_Grotesk'] text-xs font-semibold hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl liquid-btn-primary text-white font-['Space_Grotesk'] text-xs font-semibold flex items-center gap-1.5 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.5)]"
                 >
                   <span>View Note</span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  <span className="material-symbols-outlined text-[16px] transition-transform duration-200 group-hover:translate-x-1">
+                    arrow_forward
+                  </span>
                 </Link>
               </div>
             </GlassCard>
 
             {/* Note Card 3 */}
-            <GlassCard className="p-6 hover:border-white/20 transition-all duration-300 hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7),0_0_24px_rgba(129,140,248,0.15)] group">
+            <GlassCard className="p-6 hover:border-white/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7),0_0_24px_rgba(129,140,248,0.18)] group">
               <div className="flex items-center justify-between gap-3 mb-2.5">
                 <div className="flex items-center gap-2.5">
                   <span className="px-3 py-1 rounded-full bg-sky-500/20 border border-sky-400/35 text-sky-200 font-['Space_Grotesk'] text-[11px] font-semibold">
@@ -232,13 +224,7 @@ export default function StudentDashboardPage() {
                     12 min read
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/[0.05]"
-                  title="Save Bookmark"
-                >
-                  <span className="material-symbols-outlined text-[20px]">bookmark_add</span>
-                </button>
+                <InteractiveBookmarkButton />
               </div>
 
               <h3 className="font-['Space_Grotesk'] font-bold text-xl text-white group-hover:text-indigo-200 transition-colors leading-snug">
@@ -258,10 +244,12 @@ export default function StudentDashboardPage() {
                 </span>
                 <Link
                   href="/dashboard/notes"
-                  className="px-4 py-2 rounded-xl liquid-btn-primary text-white font-['Space_Grotesk'] text-xs font-semibold hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl liquid-btn-primary text-white font-['Space_Grotesk'] text-xs font-semibold flex items-center gap-1.5 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.5)]"
                 >
                   <span>View Note</span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  <span className="material-symbols-outlined text-[16px] transition-transform duration-200 group-hover:translate-x-1">
+                    arrow_forward
+                  </span>
                 </Link>
               </div>
             </GlassCard>
