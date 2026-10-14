@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { GlassCard, ReadingSurface } from "@/components/ui/glass";
 import type { SubjectWithChapters } from "@/actions/notes";
 import type { Note } from "@/db/schema";
@@ -34,6 +34,21 @@ export function StudentNotesView({
     new Set(subjects.map((s) => s.id))
   );
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  // Full-Screen & Zoom Controls
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(100);
+
+  // Keyboard shortcut: Esc exits full screen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFullscreen]);
 
   // Toggle complete
   const toggleCompleted = (noteId: string) => {
@@ -95,7 +110,27 @@ export function StudentNotesView({
     return count;
   }, [subjects]);
 
-  const progressPercent = totalNotesCount > 0 ? Math.round((completedNoteIds.size / totalNotesCount) * 100) : 0;
+  const progressPercent =
+    totalNotesCount > 0
+      ? Math.round((completedNoteIds.size / totalNotesCount) * 100)
+      : 0;
+
+  // Active breadcrumb
+  const activeBreadcrumb = useMemo(() => {
+    if (!activeNote) return null;
+    for (const sub of subjects) {
+      for (const ch of sub.chapters) {
+        if (ch.notes.some((n) => n.id === activeNote.id)) {
+          return { subject: sub.title, chapter: ch.title, note: activeNote.title };
+        }
+      }
+    }
+    return null;
+  }, [subjects, activeNote]);
+
+  const pdfUrl = activeNote
+    ? `/api/mock-r2-view?key=${encodeURIComponent(activeNote.r2ObjectKey)}`
+    : "";
 
   return (
     <div className="flex flex-col gap-6">
@@ -202,7 +237,7 @@ export function StudentNotesView({
                                     key={note.id}
                                     onClick={() => {
                                       setActiveNote(note);
-                                      setMobileDrawerOpen(false); // Auto close drawer on mobile selection
+                                      setMobileDrawerOpen(false);
                                     }}
                                     className={cn(
                                       "group flex items-center justify-between p-2 rounded-lg text-xs cursor-pointer transition-all duration-200",
@@ -251,27 +286,78 @@ export function StudentNotesView({
           </GlassCard>
         </div>
 
-        {/* Right Watermarked PDF Reading Surface */}
+        {/* Right PDF Reading Surface (with Full-Screen Capability) */}
         <div className="lg:col-span-8 flex flex-col gap-4">
           {activeNote ? (
-            <GlassCard className="p-4 md:p-6 flex flex-col gap-4">
-              {/* Note Header & Actions */}
+            <GlassCard
+              className={cn(
+                "p-4 md:p-6 flex flex-col gap-4 transition-all duration-300",
+                isFullscreen &&
+                  "fixed inset-0 z-50 p-4 sm:p-6 bg-[#07080f]/95 backdrop-blur-2xl rounded-none overflow-y-auto"
+              )}
+            >
+              {/* Note Header, Breadcrumb & Controls */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
                 <div>
+                  {activeBreadcrumb && (
+                    <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5 mb-1 truncate">
+                      <span>{activeBreadcrumb.subject}</span>
+                      <span>&rarr;</span>
+                      <span className="text-sky-300">{activeBreadcrumb.chapter}</span>
+                    </div>
+                  )}
+
                   <h2 className="font-['Space_Grotesk'] text-lg md:text-xl font-bold text-white">
                     {activeNote.title}
                   </h2>
-                  <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                  <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
                     <span className="material-symbols-outlined text-sky-400 text-[15px]">
                       lock_clock
                     </span>
-                    <span>15-min Cloudflare R2 Presigned Access</span>
+                    <span>15-min Presigned Cloudflare R2 Stream</span>
                     <span>•</span>
                     <span>{(activeNote.fileSizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-auto">
+                <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                  {/* Full-screen toggle button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsFullscreen((prev) => !prev)}
+                    className="px-3 py-1.5 rounded-xl liquid-glass-subtle hover:border-white/20 text-white text-xs font-['Space_Grotesk'] font-semibold flex items-center gap-1.5 transition-all"
+                    title={isFullscreen ? "Exit Fullscreen (Esc)" : "Fullscreen Reader View"}
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-sky-300">
+                      {isFullscreen ? "fullscreen_exit" : "fullscreen"}
+                    </span>
+                    <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+                  </button>
+
+                  {/* Zoom controls (in fullscreen) */}
+                  {isFullscreen && (
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-xl liquid-glass-subtle text-xs font-mono">
+                      <button
+                        type="button"
+                        onClick={() => setZoomLevel((z) => Math.max(75, z - 25))}
+                        className="p-1 hover:text-white text-slate-400"
+                        title="Zoom out"
+                      >
+                        -
+                      </button>
+                      <span className="px-1 text-slate-200">{zoomLevel}%</span>
+                      <button
+                        type="button"
+                        onClick={() => setZoomLevel((z) => Math.min(200, z + 25))}
+                        className="p-1 hover:text-white text-slate-400"
+                        title="Zoom in"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Mark complete */}
                   <button
                     type="button"
                     onClick={() => toggleCompleted(activeNote.id)}
@@ -290,7 +376,7 @@ export function StudentNotesView({
 
                   {activeNote.allowDownload ? (
                     <a
-                      href={`/api/mock-r2-view?key=${encodeURIComponent(activeNote.r2ObjectKey)}`}
+                      href={pdfUrl}
                       download
                       className="px-3 py-1.5 rounded-xl liquid-btn-primary text-white text-xs font-['Space_Grotesk'] font-semibold flex items-center gap-1"
                     >
@@ -303,20 +389,29 @@ export function StudentNotesView({
                       title="Admin disabled file download for this resource"
                     >
                       <span className="material-symbols-outlined text-[14px]">lock</span>
-                      <span>View Only</span>
+                      <span>Watermark Only</span>
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* High-Contrast Reading Surface with Watermark Canvas */}
-              <ReadingSurface className="relative overflow-hidden min-h-[550px] p-6 bg-slate-950/95 flex flex-col justify-between">
+              {/* High-Contrast Reading Surface with Watermark Canvas and Embedded Viewer */}
+              <ReadingSurface
+                className={cn(
+                  "relative overflow-hidden p-6 bg-slate-950/95 flex flex-col justify-between transition-all",
+                  isFullscreen ? "min-h-[calc(100vh-140px)]" : "min-h-[580px]"
+                )}
+                style={{
+                  transform: isFullscreen && zoomLevel !== 100 ? `scale(${zoomLevel / 100})` : undefined,
+                  transformOrigin: "top center",
+                }}
+              >
                 {/* Anti-Leak Diagonal Watermark Layer */}
                 <div
                   aria-hidden="true"
-                  className="absolute inset-0 pointer-events-none select-none overflow-hidden z-20 flex flex-col justify-around opacity-[0.07] rotate-[-25deg] scale-125"
+                  className="absolute inset-0 pointer-events-none select-none overflow-hidden z-30 flex flex-col justify-around opacity-[0.08] rotate-[-25deg] scale-125"
                 >
-                  {Array.from({ length: 8 }).map((_, i) => (
+                  {Array.from({ length: 12 }).map((_, i) => (
                     <div
                       key={i}
                       className="text-white text-sm font-mono whitespace-nowrap tracking-widest text-center"
@@ -333,9 +428,9 @@ export function StudentNotesView({
                       <span className="text-[11px] font-mono uppercase tracking-wider text-sky-300">
                         Section 1: Clinical Framework &amp; Core Diagnostics
                       </span>
-                      <span className="text-xs text-slate-400">Page 1 of 4</span>
+                      <span className="text-xs text-slate-400 font-mono">Page 1 of 4</span>
                     </div>
-                    <p className="text-xs md:text-sm leading-relaxed text-slate-300">
+                    <p className="text-xs sm:text-sm md:text-base leading-relaxed text-slate-300">
                       Modified Duke criteria diagnostic framework: Definite diagnosis requires 2 Major criteria, 1 Major + 3 Minor criteria, or 5 Minor criteria. Major criteria include positive blood cultures for typical organisms (e.g. S. viridans, S. aureus, Enterococcus) from separate venipunctures, and evidence of endocardial involvement demonstrated on echocardiography (vegetation, abscess, or new partial dehiscence of prosthetic valve).
                     </p>
                   </div>
@@ -344,7 +439,7 @@ export function StudentNotesView({
                     <span className="text-[11px] font-mono uppercase tracking-wider text-indigo-300 block mb-2">
                       Section 2: Pharmacotherapy &amp; Empiric Coverage
                     </span>
-                    <p className="text-xs md:text-sm leading-relaxed text-slate-300">
+                    <p className="text-xs sm:text-sm md:text-base leading-relaxed text-slate-300">
                       Native valve empiric regimen: Ampicillin-Sulbactam plus Gentamicin (or Vancomycin plus Gentamicin in penicillin-allergic patients). Prosthetic valve empiric coverage: Vancomycin plus Gentamicin plus Rifampin (minimum 6 weeks duration). Renal monitoring parameters must be tracked weekly for trough aminoglycoside concentrations.
                     </p>
                   </div>
@@ -353,7 +448,7 @@ export function StudentNotesView({
                     <span className="text-[11px] font-mono uppercase tracking-wider text-purple-300 block mb-2">
                       Section 3: Key Surgical Indications
                     </span>
-                    <ul className="text-xs md:text-sm text-slate-300 list-disc list-inside space-y-1">
+                    <ul className="text-xs sm:text-sm md:text-base text-slate-300 list-disc list-inside space-y-1">
                       <li>Refractory cardiogenic shock or acute severe aortic/mitral regurgitation</li>
                       <li>Uncontrolled infection (persistent bacteremia &gt; 7 days despite targeted therapy)</li>
                       <li>Perivalvular abscess, fistula, or enlarging vegetation (&gt; 10 mm with prior emboli)</li>

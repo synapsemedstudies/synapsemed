@@ -17,6 +17,7 @@ interface AdminNotesManagerProps {
 
 export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
   const [tree, setTree] = useState<SubjectWithChapters[]>(initialTree);
+  const [selectedBatch, setSelectedBatch] = useState("batch-2025");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(
     initialTree[0]?.id || ""
   );
@@ -33,10 +34,18 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
   const [uploading, setUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Selected Chapter object
+  // Active Subject & Chapter objects
+  const activeSubject = tree.find((s) => s.id === selectedSubjectId);
   const activeChapter = tree
     .flatMap((s) => s.chapters)
     .find((c) => c.id === selectedChapterId);
+
+  // Batches
+  const batches = [
+    { id: "batch-2025", label: "MBBS 2025 (Final Year)" },
+    { id: "batch-usmle", label: "USMLE Step 1 Prep" },
+    { id: "batch-neetpg", label: "NEET-PG Advanced Clinicals" },
+  ];
 
   // Handle Create Subject
   const handleCreateSubject = async (e: React.FormEvent) => {
@@ -44,7 +53,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
     if (!newSubjectTitle.trim()) return;
 
     setStatusMessage(null);
-    const res = await createSubject(newSubjectTitle);
+    const res = await createSubject(newSubjectTitle, selectedBatch);
     if (res.success && res.data) {
       setTree((prev) => [
         ...prev,
@@ -53,8 +62,9 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
           chapters: [],
         },
       ]);
+      setSelectedSubjectId(res.data.id);
       setNewSubjectTitle("");
-      setStatusMessage({ type: "success", text: `Subject "${res.data.title}" created successfully!` });
+      setStatusMessage({ type: "success", text: `Subject "${res.data.title}" added to ${batches.find(b => b.id === selectedBatch)?.label}!` });
     } else {
       setStatusMessage({ type: "error", text: res.error || "Failed to create subject" });
     }
@@ -82,7 +92,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
       setSelectedChapterId(res.data.id);
       setNewChapterTitle("");
       setNewChapterSlug("");
-      setStatusMessage({ type: "success", text: `Chapter "${res.data.title}" added to syllabus!` });
+      setStatusMessage({ type: "success", text: `Chapter "${res.data.title}" registered with slug "${res.data.slug}"!` });
     } else {
       setStatusMessage({ type: "error", text: res.error || "Failed to create chapter" });
     }
@@ -141,7 +151,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
         setNoteTitle("");
         setStatusMessage({
           type: "success",
-          text: `PDF "${finalTitle}" uploaded directly to Cloudflare R2!`,
+          text: `PDF "${finalTitle}" uploaded directly to Cloudflare R2 and indexed under ${activeChapter?.title}!`,
         });
       } else {
         throw new Error(dbRes.error || "Failed to register note record");
@@ -157,6 +167,107 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* 4-Step Structured Architecture Stepper Guide */}
+      <GlassCard className="p-4 md:p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-indigo-400 text-[20px]">
+              account_tree
+            </span>
+            <h3 className="font-['Space_Grotesk'] text-sm md:text-base font-bold text-white">
+              Structured Upload Architecture: Batch &rarr; Subject &rarr; Chapter &rarr; Note
+            </h3>
+          </div>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full liquid-badge text-sky-300">
+            Cloudflare R2 Presigned
+          </span>
+        </div>
+        <p className="text-xs text-slate-300 mb-4 leading-relaxed">
+          Every clinical PDF note is indexed within a strict 4-tier hierarchy. This enables high-speed search, dynamic syllabus navigation, and automatic deep linking from student quiz mistake reviews directly into the corresponding chapter notes.
+        </p>
+
+        {/* Responsive Stepper */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className={cn(
+            "p-3 rounded-xl border transition-all text-xs flex flex-col gap-1",
+            selectedBatch
+              ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-200"
+              : "bg-white/[0.02] border-white/10 text-slate-400"
+          )}>
+            <div className="flex items-center gap-1.5 font-['Space_Grotesk'] font-bold">
+              <span className="w-5 h-5 rounded-full bg-indigo-500/30 text-indigo-300 flex items-center justify-center text-[11px]">1</span>
+              <span>Select Batch</span>
+            </div>
+            <span className="text-[11px] truncate text-slate-400">
+              {batches.find(b => b.id === selectedBatch)?.label.split(" ")[0] || "Target batch"}
+            </span>
+          </div>
+
+          <div className={cn(
+            "p-3 rounded-xl border transition-all text-xs flex flex-col gap-1",
+            selectedSubjectId
+              ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-200"
+              : "bg-white/[0.02] border-white/10 text-slate-400"
+          )}>
+            <div className="flex items-center gap-1.5 font-['Space_Grotesk'] font-bold">
+              <span className="w-5 h-5 rounded-full bg-indigo-500/30 text-indigo-300 flex items-center justify-center text-[11px]">2</span>
+              <span>Choose Subject</span>
+            </div>
+            <span className="text-[11px] truncate text-slate-400">
+              {activeSubject?.title || "e.g. Cardiology"}
+            </span>
+          </div>
+
+          <div className={cn(
+            "p-3 rounded-xl border transition-all text-xs flex flex-col gap-1",
+            selectedChapterId
+              ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-200"
+              : "bg-white/[0.02] border-white/10 text-slate-400"
+          )}>
+            <div className="flex items-center gap-1.5 font-['Space_Grotesk'] font-bold">
+              <span className="w-5 h-5 rounded-full bg-indigo-500/30 text-indigo-300 flex items-center justify-center text-[11px]">3</span>
+              <span>Target Chapter</span>
+            </div>
+            <span className="text-[11px] truncate text-slate-400">
+              {activeChapter?.title || "e.g. Heart Failure"}
+            </span>
+          </div>
+
+          <div className={cn(
+            "p-3 rounded-xl border transition-all text-xs flex flex-col gap-1",
+            uploading
+              ? "bg-sky-500/20 border-sky-400/40 text-sky-200 animate-pulse"
+              : "bg-white/[0.02] border-white/10 text-slate-400"
+          )}>
+            <div className="flex items-center gap-1.5 font-['Space_Grotesk'] font-bold">
+              <span className="w-5 h-5 rounded-full bg-sky-500/30 text-sky-300 flex items-center justify-center text-[11px]">4</span>
+              <span>Upload PDF</span>
+            </div>
+            <span className="text-[11px] truncate text-slate-400">
+              {uploading ? "Direct R2 PUT..." : "Presigned R2 Drop"}
+            </span>
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Live Breadcrumb Confirmation Pill */}
+      {activeChapter && (
+        <div className="px-4 py-2.5 rounded-xl liquid-glass-subtle border border-indigo-500/30 flex items-center justify-between flex-wrap gap-2 text-xs">
+          <div className="flex items-center gap-2 text-slate-300 font-mono text-[11px] flex-wrap">
+            <span className="text-indigo-400 font-semibold">Active Destination:</span>
+            <span>{batches.find(b => b.id === selectedBatch)?.label}</span>
+            <span>&rarr;</span>
+            <span className="text-white font-medium">{activeSubject?.title}</span>
+            <span>&rarr;</span>
+            <span className="text-sky-300 font-bold">{activeChapter.title}</span>
+            <span className="text-slate-500">({activeChapter.slug})</span>
+          </div>
+          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+            Target Ready for PDF
+          </span>
+        </div>
+      )}
+
       {/* Status banner */}
       {statusMessage && (
         <div
@@ -176,15 +287,38 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
 
       {/* 2-Column Responsive Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Syllabus Tree & Creation Forms */}
+        {/* Left Column: Syllabus Structure Builder & Quick Selector */}
         <div className="lg:col-span-5 flex flex-col gap-5">
+          {/* Batch Selector Card */}
+          <GlassCard className="p-4 md:p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-['Space_Grotesk'] font-bold text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-indigo-400 text-[18px]">
+                  school
+                </span>
+                <span>Target Student Batch</span>
+              </span>
+            </div>
+            <select
+              value={selectedBatch}
+              onChange={(e) => setSelectedBatch(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl bg-[#0c0e1a] border border-white/[0.1] text-white text-xs focus:outline-none focus:border-indigo-400/70"
+            >
+              {batches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.label}
+                </option>
+              ))}
+            </select>
+          </GlassCard>
+
           {/* Create Subject Card */}
           <GlassCard className="p-5">
             <h3 className="font-['Space_Grotesk'] text-sm font-bold text-white mb-3 flex items-center gap-2">
               <span className="material-symbols-outlined text-indigo-400 text-[18px]">
                 create_new_folder
               </span>
-              <span>Add Medical Subject</span>
+              <span>1. Add Medical Subject</span>
             </h3>
 
             <form onSubmit={handleCreateSubject} className="flex gap-2">
@@ -192,7 +326,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
                 type="text"
                 value={newSubjectTitle}
                 onChange={(e) => setNewSubjectTitle(e.target.value)}
-                placeholder="e.g. Dermatology"
+                placeholder="e.g. Dermatology / Pathology"
                 className="flex-1 h-10 px-3.5 rounded-xl bg-white/[0.04] border border-white/[0.09] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-indigo-400/70"
               />
               <button
@@ -210,7 +344,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
               <span className="material-symbols-outlined text-sky-400 text-[18px]">
                 note_add
               </span>
-              <span>Add Chapter to Subject</span>
+              <span>2. Add Chapter (with Quiz Link Slug)</span>
             </h3>
 
             <form onSubmit={handleCreateChapter} className="flex flex-col gap-3">
@@ -218,7 +352,13 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
                 <label className="block text-[11px] text-slate-400 mb-1">Target Subject</label>
                 <select
                   value={selectedSubjectId}
-                  onChange={(e) => setSelectedSubjectId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedSubjectId(e.target.value);
+                    const sub = tree.find(s => s.id === e.target.value);
+                    if (sub && sub.chapters.length > 0) {
+                      setSelectedChapterId(sub.chapters[0].id);
+                    }
+                  }}
                   className="w-full h-10 px-3 rounded-xl bg-[#0c0e1a] border border-white/[0.1] text-white text-xs focus:outline-none focus:border-indigo-400/70"
                 >
                   {tree.map((sub) => (
@@ -252,7 +392,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
 
               <div>
                 <label className="block text-[11px] text-slate-400 mb-1">
-                  Unique Slug (for Quiz Deep Links)
+                  Unique Slug (For automatic Quiz question deep linking)
                 </label>
                 <input
                   type="text"
@@ -272,29 +412,50 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
             </form>
           </GlassCard>
 
-          {/* Quick Chapter Selector List */}
-          <GlassCard className="p-4 max-h-64 overflow-y-auto">
+          {/* Quick Syllabus Tree Target Selector */}
+          <GlassCard className="p-4 max-h-72 overflow-y-auto">
             <span className="text-[11px] font-['Space_Grotesk'] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-              Select Chapter for Upload
+              3. Click Any Chapter to Target Upload
             </span>
-            <div className="flex flex-col gap-1">
-              {tree.flatMap((s) => s.chapters).map((ch) => (
-                <button
-                  key={ch.id}
-                  type="button"
-                  onClick={() => setSelectedChapterId(ch.id)}
-                  className={cn(
-                    "p-2 rounded-lg text-xs text-left transition-all flex items-center justify-between",
-                    selectedChapterId === ch.id
-                      ? "liquid-pill-active text-white font-semibold"
-                      : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
-                  )}
-                >
-                  <span className="truncate">{ch.title}</span>
-                  <span className="text-[10px] font-mono text-slate-400 ml-2">
-                    {ch.notes.length} notes
+            <div className="flex flex-col gap-2">
+              {tree.map((sub) => (
+                <div key={sub.id} className="flex flex-col gap-1 border-b border-white/[0.05] pb-2 last:border-b-0">
+                  <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 px-1">
+                    <span className="material-symbols-outlined text-[14px] text-indigo-400">folder</span>
+                    <span>{sub.title}</span>
                   </span>
-                </button>
+
+                  <div className="ml-3 flex flex-col gap-1">
+                    {sub.chapters.map((ch) => (
+                      <button
+                        key={ch.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSubjectId(sub.id);
+                          setSelectedChapterId(ch.id);
+                        }}
+                        className={cn(
+                          "p-2 rounded-lg text-xs text-left transition-all flex items-center justify-between",
+                          selectedChapterId === ch.id
+                            ? "liquid-pill-active text-white font-semibold"
+                            : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
+                        )}
+                      >
+                        <span className="truncate">{ch.title}</span>
+                        <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {ch.notes.length} notes
+                          </span>
+                          {selectedChapterId === ch.id && (
+                            <span className="material-symbols-outlined text-sky-400 text-[14px]">
+                              arrow_forward
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </GlassCard>
@@ -306,17 +467,18 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
               <div>
                 <h3 className="font-['Space_Grotesk'] text-base font-bold text-white">
-                  Direct Cloudflare R2 Presigned Uploader
+                  4. Direct Cloudflare R2 Presigned Uploader
                 </h3>
                 <span className="text-xs text-slate-400">
                   Target Chapter:{" "}
                   <strong className="text-sky-300 font-semibold">
                     {activeChapter?.title || "None selected"}
-                  </strong>
+                  </strong>{" "}
+                  <span className="font-mono text-[10px] text-slate-500">({activeChapter?.slug})</span>
                 </span>
               </div>
               <span className="text-[11px] font-mono px-2 py-0.5 rounded-full liquid-badge text-sky-300">
-                15-Min Expiry
+                15-Min Presigned PUT
               </span>
             </div>
 
@@ -362,10 +524,10 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
                 </span>
 
                 <h4 className="font-['Space_Grotesk'] text-sm font-bold text-white mb-1">
-                  {uploading ? "Uploading directly to Cloudflare R2..." : "Click or drag medical PDF here"}
+                  {uploading ? "Uploading directly to Cloudflare R2..." : `Click or drag PDF for "${activeChapter?.title || "chapter"}"`}
                 </h4>
                 <p className="text-xs text-slate-400 max-w-sm">
-                  Zero Next.js server memory buffering. Direct presigned browser PUT to R2.
+                  Zero Next.js server memory buffering. Direct presigned browser PUT to Cloudflare R2 object storage.
                 </p>
               </div>
             </div>
@@ -373,8 +535,11 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
 
           {/* Notes currently inside selected Chapter */}
           <GlassCard className="p-6">
-            <h3 className="font-['Space_Grotesk'] text-sm font-bold text-white mb-3">
-              Notes in {activeChapter?.title || "Selected Chapter"}
+            <h3 className="font-['Space_Grotesk'] text-sm font-bold text-white mb-3 flex items-center justify-between">
+              <span>Notes in &ldquo;{activeChapter?.title || "Selected Chapter"}&rdquo;</span>
+              <span className="text-xs font-mono text-slate-400">
+                {activeChapter?.notes.length || 0} files indexed
+              </span>
             </h3>
 
             {activeChapter && activeChapter.notes.length > 0 ? (
