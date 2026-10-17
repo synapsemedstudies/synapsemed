@@ -8,7 +8,7 @@ import { MobileBottomNav } from "@/components/ui/mobile-bottom-nav";
 const ADMIN_NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: "space_dashboard" },
   { label: "Notes", href: "/admin/notes", icon: "menu_book" },
-  { label: "Excel Quiz", href: "/admin/quizzes/new", icon: "upload_file" },
+  { label: "Quiz Builder", href: "/admin/quizzes/new", icon: "assignment" },
   { label: "Students", href: "/admin/students", icon: "group" },
 ];
 

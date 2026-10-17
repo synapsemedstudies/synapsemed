@@ -3,7 +3,7 @@
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/db";
 import { quizzes, quizQuestions, type Quiz, type QuizQuestion } from "@/db/schema";
-import { QuizRowSchema, type QuizRow } from "@/lib/validators/quiz";
+import { QuizRowSchema, type QuizRow, ManualQuizSchema, type ManualQuiz } from "@/lib/validators/quiz";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { desc, eq } from "drizzle-orm";
@@ -95,6 +95,73 @@ export async function createQuizFromExcel(input: CreateQuizInput) {
     return { success: false, error: msg };
   }
 }
+
+/**
+ * Server Action to transactionally insert a Quiz authored through the
+ * Google Forms-style Interactive Quiz Maker.
+ */
+export async function createInteractiveQuiz(input: ManualQuiz) {
+  await requireAdmin();
+
+  const parseRes = ManualQuizSchema.safeParse(input);
+  if (!parseRes.success) {
+    return {
+      success: false,
+      error: parseRes.error.issues[0]?.message || "Quiz validation failed",
+    };
+  }
+
+  const { title, duration_minutes, batch_id, subject_id, chapter_id, is_published, questions } = parseRes.data;
+
+  try {
+    const newQuizId = await db.transaction(async (tx) => {
+      const [insertedQuiz] = await tx
+        .insert(quizzes)
+        .values({
+          title: title.trim(),
+          subjectId: subject_id || null,
+          chapterId: chapter_id || null,
+          batchId: batch_id || "batch-2025",
+          durationMinutes: duration_minutes || 15,
+          isPublished: is_published ?? true,
+        })
+        .returning({ id: quizzes.id });
+
+      const questionInserts = questions.map((q, idx) => ({
+        quizId: insertedQuiz.id,
+        questionNumber: idx + 1,
+        questionText: q.question_text.trim(),
+        optionA: q.option_a.trim(),
+        optionB: q.option_b.trim(),
+        optionC: q.option_c.trim(),
+        optionD: q.option_d.trim(),
+        correctOption: q.correct_option,
+        marks: q.marks.toString(),
+        negativeMarks: q.negative_marks.toString(),
+        chapterSlug: q.chapter_slug || null,
+        explanation: q.explanation || null,
+      }));
+
+      await tx.insert(quizQuestions).values(questionInserts);
+
+      return insertedQuiz.id;
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/quizzes/new");
+    revalidatePath("/dashboard/quizzes");
+
+    return {
+      success: true,
+      quizId: newQuizId,
+      totalQuestions: questions.length,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to insert interactive quiz into database";
+    return { success: false, error: msg };
+  }
+}
+
 
 /**
  * Fetch all quizzes for admin overview

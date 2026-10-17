@@ -1,13 +1,16 @@
 import React from "react";
 import { requireAdmin } from "@/lib/auth";
-import { AdminQuizUploader } from "@/components/quizzes/admin-quiz-uploader";
+import { getSubjectsTree } from "@/actions/notes";
+import { QuizCreatorHub } from "@/components/quizzes/quiz-creator-hub";
 
 export default async function AdminNewQuizPage() {
   await requireAdmin();
+  const subjectsTree = await getSubjectsTree();
 
   return (
     <div className="flex flex-col gap-6">
-      <AdminQuizUploader />
+      <QuizCreatorHub subjectsTree={subjectsTree} />
     </div>
   );
 }
+

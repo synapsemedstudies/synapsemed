@@ -44,8 +44,8 @@ export default async function AdminDashboardPage() {
             href="/admin/quizzes/new"
             className="px-4 py-2.5 rounded-xl liquid-btn-primary text-white text-xs font-['Space_Grotesk'] font-semibold hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-[0_4px_16px_rgba(99,102,241,0.35)]"
           >
-            <span className="material-symbols-outlined text-[18px]">upload_file</span>
-            <span>Import Excel Quiz</span>
+            <span className="material-symbols-outlined text-[18px]">assignment</span>
+            <span>Create / Import Quiz</span>
           </Link>
           <Link
             href="/admin/notes"
@@ -163,20 +163,20 @@ export default async function AdminDashboardPage() {
               <div className="p-4 rounded-xl liquid-glass-subtle flex flex-col justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 text-sky-300 mb-1.5">
-                    <span className="material-symbols-outlined text-[20px]">table_view</span>
+                    <span className="material-symbols-outlined text-[20px]">assignment</span>
                     <span className="font-['Space_Grotesk'] font-semibold text-sm">
-                      Excel Quiz Ingestion
+                      Quiz Authoring &amp; Ingestion
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Import multiple-choice quizzes directly from `.xlsx` files with instant client-side preview and Zod row validation.
+                    Create interactive quizzes with Google Forms-style question builder, or bulk import directly from `.xlsx` files with instant Zod validation.
                   </p>
                 </div>
                 <Link
                   href="/admin/quizzes/new"
                   className="text-xs font-['Space_Grotesk'] font-semibold text-sky-300 hover:text-white flex items-center gap-1 self-start transition-colors"
                 >
-                  <span>Import Quiz Spreadsheet</span>
+                  <span>Open Quiz Builder</span>
                   <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                 </Link>
               </div>

@@ -117,3 +117,40 @@ export function validateQuizRows(rawRows: Record<string, unknown>[]): QuizParseR
     totalRows: rawRows.length,
   };
 }
+
+/**
+ * Zod schema for individual question in the Google Forms-style Interactive Quiz Builder.
+ */
+export const ManualQuestionSchema = z.object({
+  id: z.string(),
+  question_text: z.string().min(3, "Question text must be at least 3 characters"),
+  option_a: z.string().min(1, "Option A cannot be empty"),
+  option_b: z.string().min(1, "Option B cannot be empty"),
+  option_c: z.string().min(1, "Option C cannot be empty"),
+  option_d: z.string().min(1, "Option D cannot be empty"),
+  correct_option: z.enum(["A", "B", "C", "D"], {
+    errorMap: () => ({ message: "Select the correct option (A, B, C, or D)" }),
+  }),
+  marks: z.coerce.number().positive("Marks must be positive").default(4.0),
+  negative_marks: z.coerce.number().min(0, "Negative penalty cannot be negative").default(1.0),
+  chapter_slug: z.string().optional().nullable().transform((v) => v?.trim() || null),
+  explanation: z.string().optional().nullable().transform((v) => v?.trim() || null),
+});
+
+export type ManualQuestion = z.infer<typeof ManualQuestionSchema>;
+
+/**
+ * Zod schema for full interactive quiz submission from the Google Forms-style maker.
+ */
+export const ManualQuizSchema = z.object({
+  title: z.string().min(3, "Quiz title must be at least 3 characters"),
+  duration_minutes: z.coerce.number().int().min(1, "Duration must be at least 1 minute").max(360).default(15),
+  batch_id: z.string().default("batch-2025"),
+  subject_id: z.string().optional().nullable(),
+  chapter_id: z.string().optional().nullable(),
+  is_published: z.boolean().default(true),
+  questions: z.array(ManualQuestionSchema).min(1, "At least one question is required"),
+});
+
+export type ManualQuiz = z.infer<typeof ManualQuizSchema>;
+
