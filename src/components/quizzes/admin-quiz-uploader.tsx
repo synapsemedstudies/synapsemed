@@ -15,7 +15,6 @@ import Link from "next/link";
 export function AdminQuizUploader() {
   const [quizTitle, setQuizTitle] = useState("");
   const [durationMinutes, setDurationMinutes] = useState(15);
-  const [batchId, setBatchId] = useState("batch-2025");
   const [parsedRows, setParsedRows] = useState<QuizRow[]>([]);
   const [validationErrors, setValidationErrors] = useState<RowValidationError[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -96,7 +95,6 @@ export function AdminQuizUploader() {
     const res = await createQuizFromExcel({
       title: quizTitle.trim(),
       durationMinutes,
-      batchId,
       isPublished: true,
       rows: parsedRows,
     });
@@ -269,32 +267,18 @@ export function AdminQuizUploader() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-['Space_Grotesk'] font-semibold text-slate-300 mb-1">
-                    Duration (Minutes)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="180"
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                    className="w-full h-10 px-3.5 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white text-xs focus:outline-none focus:border-indigo-400/70"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-['Space_Grotesk'] font-semibold text-slate-300 mb-1">
-                    Student Batch
-                  </label>
-                  <input
-                    type="text"
-                    value={batchId}
-                    onChange={(e) => setBatchId(e.target.value)}
-                    className="w-full h-10 px-3.5 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white text-xs font-mono focus:outline-none focus:border-indigo-400/70"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-['Space_Grotesk'] font-semibold text-slate-300 mb-1">
+                  Duration (Minutes)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="180"
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                  className="w-full h-10 px-3.5 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white text-xs focus:outline-none focus:border-indigo-400/70"
+                />
               </div>
 
               {/* Status summary pill */}

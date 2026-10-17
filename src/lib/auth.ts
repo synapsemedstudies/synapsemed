@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -17,8 +18,9 @@ export interface AuthenticatedUser {
 /**
  * Get current authenticated user, supporting Supabase SSR Auth
  * and local demo session cookies for seamless testing.
+ * Wrapped in React cache() so it runs at most ONCE per server request.
  */
-export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
+export const getCurrentUser = cache(async (): Promise<AuthenticatedUser | null> => {
   const cookieStore = cookies();
   const demoRole = cookieStore.get("demo_role")?.value;
 
@@ -27,19 +29,19 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
     return {
       id: "00000000-0000-0000-0000-000000000001",
       email: "admin@synapsemed.edu",
-      fullName: "Dr. A. Vance",
+      fullName: "Faculty Administrator",
       role: "admin",
       rollNumber: null,
-      batchId: "batch-2025",
+      batchId: null,
     };
   } else if (demoRole === "student") {
     return {
       id: "00000000-0000-0000-0000-000000000002",
       email: "student@synapsemed.edu",
-      fullName: "Alex Rivera",
+      fullName: "Student User",
       role: "student",
-      rollNumber: "MED-2025-084",
-      batchId: "batch-2025",
+      rollNumber: "MED-001",
+      batchId: null,
     };
   }
 
@@ -53,7 +55,24 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
       return null;
     }
 
-    // Fetch user details and role from Drizzle DB
+    // Fast-path: if user_metadata has role and name (set during account creation/login),
+    // return immediately without an extra round-trip to PostgreSQL!
+    if (authUser.user_metadata?.role) {
+      return {
+        id: authUser.id,
+        email: authUser.email,
+        fullName:
+          authUser.user_metadata.full_name ||
+          (authUser.user_metadata.role === "admin"
+            ? "Faculty Administrator"
+            : authUser.email.split("@")[0]),
+        role: authUser.user_metadata.role as "admin" | "student",
+        rollNumber: authUser.user_metadata.roll_number || null,
+        batchId: null,
+      };
+    }
+
+    // Fallback: Fetch user details and role from Drizzle DB if metadata missing
     const [dbUser] = await db
       .select()
       .from(users)
@@ -67,25 +86,22 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
         fullName: dbUser.fullName,
         role: dbUser.role as "admin" | "student",
         rollNumber: dbUser.rollNumber,
-        batchId: dbUser.batchId,
+        batchId: null,
       };
     }
 
-    // Default metadata fallback if user exists in auth but not yet in DB table
-    const metaRole = (authUser.user_metadata?.role as "admin" | "student") || "student";
     return {
       id: authUser.id,
       email: authUser.email,
-      fullName: authUser.user_metadata?.full_name || authUser.email.split("@")[0],
-      role: metaRole,
-      rollNumber: authUser.user_metadata?.roll_number || null,
-      batchId: authUser.user_metadata?.batch_id || null,
+      fullName: authUser.email.split("@")[0],
+      role: "student",
+      rollNumber: null,
+      batchId: null,
     };
   } catch {
-    // If Supabase connection fails or is offline, return null
     return null;
   }
-}
+});
 
 /**
  * Require an authenticated admin user.

@@ -9,15 +9,19 @@ const accountId = process.env.R2_ACCOUNT_ID || "dummy_account_id";
 const accessKeyId = process.env.R2_ACCESS_KEY_ID || "dummy_access_key";
 const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || "dummy_secret_key";
 export const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "student-notes-portal";
+const endpoint =
+  process.env.R2_ENDPOINT || `https://${accountId}.r2.cloudflarestorage.com`;
+const region = process.env.R2_REGION || "auto";
 
-// Cloudflare R2 S3 Client
+// S3-Compatible Client (Supports Cloudflare R2, Supabase Storage S3, MinIO)
 export const r2Client = new S3Client({
-  region: "auto",
-  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+  region,
+  endpoint,
   credentials: {
     accessKeyId,
     secretAccessKey,
   },
+  forcePathStyle: true,
 });
 
 /**
@@ -30,7 +34,10 @@ export async function getPresignedUploadUrl(
   expiresInSeconds: number = 900 // 15 minutes
 ): Promise<{ uploadUrl: string; objectKey: string }> {
   // If running in development with dummy credentials, provide a safe local mock URL
-  if (accessKeyId === "dummy_access_key" || !process.env.R2_ACCOUNT_ID) {
+  if (
+    accessKeyId === "dummy_access_key" ||
+    (!process.env.R2_ACCOUNT_ID && !process.env.R2_ENDPOINT)
+  ) {
     return {
       uploadUrl: `/api/mock-r2-upload?key=${encodeURIComponent(objectKey)}`,
       objectKey,
@@ -58,7 +65,10 @@ export async function getPresignedViewUrl(
   expiresInSeconds: number = 900 // 15 minutes
 ): Promise<string> {
   // If running in development with dummy credentials, provide safe mock viewer URL
-  if (accessKeyId === "dummy_access_key" || !process.env.R2_ACCOUNT_ID) {
+  if (
+    accessKeyId === "dummy_access_key" ||
+    (!process.env.R2_ACCOUNT_ID && !process.env.R2_ENDPOINT)
+  ) {
     return `/api/mock-r2-view?key=${encodeURIComponent(objectKey)}`;
   }
 

@@ -27,6 +27,7 @@ export const users = pgTable(
     role: roleEnum("role").notNull().default("student"),
     rollNumber: text("roll_number"),
     batchId: text("batch_id"),
+    totpSecret: text("totp_secret"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
@@ -150,33 +151,9 @@ export const quizAttempts = pgTable(
   })
 );
 
-// 8. Mistake Items Table
-export const mistakeItems = pgTable(
-  "mistake_items",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    studentId: uuid("student_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    questionId: uuid("question_id")
-      .notNull()
-      .references(() => quizQuestions.id, { onDelete: "cascade" }),
-    chapterSlug: text("chapter_slug"),
-    resolved: boolean("resolved").notNull().default(false),
-    lastMissedAt: timestamp("last_missed_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => ({
-    studentQuestionIdx: uniqueIndex("mistake_items_student_question_idx").on(
-      table.studentId,
-      table.questionId
-    ),
-  })
-);
-
 // Relational Definitions
 export const usersRelations = relations(users, ({ many }) => ({
   quizAttempts: many(quizAttempts),
-  mistakeItems: many(mistakeItems),
 }));
 
 export const subjectsRelations = relations(subjects, ({ many }) => ({
@@ -213,12 +190,11 @@ export const quizzesRelations = relations(quizzes, ({ one, many }) => ({
   attempts: many(quizAttempts),
 }));
 
-export const quizQuestionsRelations = relations(quizQuestions, ({ one, many }) => ({
+export const quizQuestionsRelations = relations(quizQuestions, ({ one }) => ({
   quiz: one(quizzes, {
     fields: [quizQuestions.quizId],
     references: [quizzes.id],
   }),
-  mistakeItems: many(mistakeItems),
 }));
 
 export const quizAttemptsRelations = relations(quizAttempts, ({ one }) => ({
@@ -229,17 +205,6 @@ export const quizAttemptsRelations = relations(quizAttempts, ({ one }) => ({
   student: one(users, {
     fields: [quizAttempts.studentId],
     references: [users.id],
-  }),
-}));
-
-export const mistakeItemsRelations = relations(mistakeItems, ({ one }) => ({
-  student: one(users, {
-    fields: [mistakeItems.studentId],
-    references: [users.id],
-  }),
-  question: one(quizQuestions, {
-    fields: [mistakeItems.questionId],
-    references: [quizQuestions.id],
   }),
 }));
 
@@ -258,5 +223,3 @@ export type QuizQuestion = typeof quizQuestions.$inferSelect;
 export type NewQuizQuestion = typeof quizQuestions.$inferInsert;
 export type QuizAttempt = typeof quizAttempts.$inferSelect;
 export type NewQuizAttempt = typeof quizAttempts.$inferInsert;
-export type MistakeItem = typeof mistakeItems.$inferSelect;
-export type NewMistakeItem = typeof mistakeItems.$inferInsert;

@@ -15,14 +15,13 @@ export default async function NotesPage() {
             Structured Notes Library
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Hierarchical study notes backed by Cloudflare R2 with student anti-leak watermarks.
+            Hierarchical study notes backed by Cloudflare R2 storage.
           </p>
         </div>
 
         <StudentNotesView
           subjects={subjectsTree}
           studentName={student.fullName}
-          studentRollNumber={student.rollNumber || "MBBS-2025"}
         />
       </div>
     </main>

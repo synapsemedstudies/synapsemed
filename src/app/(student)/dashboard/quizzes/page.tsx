@@ -20,42 +20,51 @@ interface QuizCardData {
 
 async function getStudentQuizzes(studentId: string): Promise<QuizCardData[]> {
   try {
-    const rawQuizzes = await db
-      .select()
-      .from(quizzes)
-      .where(eq(quizzes.isPublished, true))
-      .orderBy(desc(quizzes.createdAt));
-
-    const list: QuizCardData[] = [];
-
-    for (const q of rawQuizzes) {
-      const qQuestions = await db
+    const [rawQuizzes, allQuestions, studentAttempts] = await Promise.all([
+      db
         .select()
-        .from(quizQuestions)
-        .where(eq(quizQuestions.quizId, q.id));
-
-      const [attempt] = await db
+        .from(quizzes)
+        .where(eq(quizzes.isPublished, true))
+        .orderBy(desc(quizzes.createdAt)),
+      db
+        .select({ id: quizQuestions.id, quizId: quizQuestions.quizId })
+        .from(quizQuestions),
+      db
         .select()
         .from(quizAttempts)
-        .where(eq(quizAttempts.quizId, q.id))
-        .limit(1);
+        .where(eq(quizAttempts.studentId, studentId)),
+    ]);
 
-      list.push({
+    // Group question count by quizId in-memory (0ms)
+    const questionCountByQuiz = new Map<string, number>();
+    for (const q of allQuestions) {
+      questionCountByQuiz.set(q.quizId, (questionCountByQuiz.get(q.quizId) || 0) + 1);
+    }
+
+    // Map student attempt by quizId in-memory (0ms)
+    const attemptByQuiz = new Map<string, typeof studentAttempts[0]>();
+    for (const att of studentAttempts) {
+      if (!attemptByQuiz.has(att.quizId)) {
+        attemptByQuiz.set(att.quizId, att);
+      }
+    }
+
+    return rawQuizzes.map((q) => {
+      const att = attemptByQuiz.get(q.id);
+      return {
         id: q.id,
         title: q.title,
         durationMinutes: q.durationMinutes,
-        questionCount: qQuestions.length,
-        attempt: attempt
+        questionCount: questionCountByQuiz.get(q.id) || 0,
+        attempt: att
           ? {
-              score: attempt.score,
-              totalMarks: attempt.totalMarks,
-              timeTakenSeconds: attempt.timeTakenSeconds,
+              score: att.score,
+              totalMarks: att.totalMarks,
+              timeTakenSeconds: att.timeTakenSeconds,
             }
           : null,
-      });
-    }
-
-    return list;
+      };
+    });
   } catch {
     // Fallback sample data if DB is offline
     return [
@@ -101,19 +110,9 @@ export default async function QuizzesPage() {
               Medical Quiz Center
             </h1>
             <p className="text-slate-400 text-xs sm:text-sm mt-1">
-              Timed clinical scenarios with negative marking and instant Mistake Notebook indexing.
+              Timed clinical scenarios with negative marking and instant scoring.
             </p>
           </div>
-
-          <Link
-            href="/dashboard/mistakes"
-            className="px-4 py-2.5 rounded-xl liquid-glass-subtle hover:border-white/20 text-white text-xs font-['Space_Grotesk'] font-semibold flex items-center gap-2 self-start sm:self-auto transition-all"
-          >
-            <span className="material-symbols-outlined text-[18px] text-purple-400">
-              history_edu
-            </span>
-            <span>Open Mistake Notebook</span>
-          </Link>
         </div>
 
         {/* Quiz Grid Cards */}

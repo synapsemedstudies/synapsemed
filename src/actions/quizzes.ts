@@ -105,25 +105,20 @@ export async function getAdminQuizzes(): Promise<
   await requireAdmin();
 
   try {
-    const allQuizzes = await db
-      .select()
-      .from(quizzes)
-      .orderBy(desc(quizzes.createdAt));
+    const [allQuizzes, allQuestions] = await Promise.all([
+      db.select().from(quizzes).orderBy(desc(quizzes.createdAt)),
+      db.select({ quizId: quizQuestions.quizId }).from(quizQuestions),
+    ]);
 
-    const result = [];
-    for (const q of allQuizzes) {
-      const qQuestions = await db
-        .select()
-        .from(quizQuestions)
-        .where(eq(quizQuestions.quizId, q.id));
-
-      result.push({
-        ...q,
-        questionCount: qQuestions.length,
-      });
+    const counts = new Map<string, number>();
+    for (const q of allQuestions) {
+      counts.set(q.quizId, (counts.get(q.quizId) || 0) + 1);
     }
 
-    return result;
+    return allQuizzes.map((q) => ({
+      ...q,
+      questionCount: counts.get(q.id) || 0,
+    }));
   } catch {
     // Fallback sample data if DB is offline
     return [

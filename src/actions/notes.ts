@@ -16,42 +16,38 @@ export interface SubjectWithChapters extends Subject {
  */
 export async function getSubjectsTree(): Promise<SubjectWithChapters[]> {
   try {
-    const rawSubjects = await db
-      .select()
-      .from(subjects)
-      .orderBy(asc(subjects.orderIndex));
+    // Single parallel batch fetch: 3 queries execute concurrently in 1 network round-trip!
+    const [rawSubjects, rawChapters, rawNotes] = await Promise.all([
+      db.select().from(subjects).orderBy(asc(subjects.orderIndex)),
+      db.select().from(chapters).orderBy(asc(chapters.orderIndex)),
+      db.select().from(notes).orderBy(asc(notes.createdAt)),
+    ]);
 
-    const result: SubjectWithChapters[] = [];
-
-    for (const sub of rawSubjects) {
-      const subChapters = await db
-        .select()
-        .from(chapters)
-        .where(eq(chapters.subjectId, sub.id))
-        .orderBy(asc(chapters.orderIndex));
-
-      const chaptersWithNotes = [];
-
-      for (const ch of subChapters) {
-        const chNotes = await db
-          .select()
-          .from(notes)
-          .where(eq(notes.chapterId, ch.id))
-          .orderBy(asc(notes.createdAt));
-
-        chaptersWithNotes.push({
-          ...ch,
-          notes: chNotes,
-        });
-      }
-
-      result.push({
-        ...sub,
-        chapters: chaptersWithNotes,
-      });
+    // Group notes by chapterId in-memory (0ms)
+    const notesByChapter = new Map<string, Note[]>();
+    for (const n of rawNotes) {
+      const arr = notesByChapter.get(n.chapterId) || [];
+      arr.push(n);
+      notesByChapter.set(n.chapterId, arr);
     }
 
-    return result;
+    // Group chapters by subjectId in-memory (0ms)
+    const chaptersBySubject = new Map<string, (Chapter & { notes: Note[] })[]>();
+    for (const ch of rawChapters) {
+      const chWithNotes = {
+        ...ch,
+        notes: notesByChapter.get(ch.id) || [],
+      };
+      const arr = chaptersBySubject.get(ch.subjectId) || [];
+      arr.push(chWithNotes);
+      chaptersBySubject.set(ch.subjectId, arr);
+    }
+
+    // Assemble final tree
+    return rawSubjects.map((sub) => ({
+      ...sub,
+      chapters: chaptersBySubject.get(sub.id) || [],
+    }));
   } catch {
     // Return sample seeded hierarchy for instant preview if DB is unseeded
     return [
@@ -178,7 +174,7 @@ export async function getSubjectsTree(): Promise<SubjectWithChapters[]> {
 /**
  * Admin action to create a Subject
  */
-export async function createSubject(title: string, batchId = "batch-2025") {
+export async function createSubject(title: string, batchId: string | null = null) {
   await requireAdmin();
 
   if (!title.trim()) {

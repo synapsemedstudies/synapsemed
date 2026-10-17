@@ -17,7 +17,6 @@ interface AdminNotesManagerProps {
 
 export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
   const [tree, setTree] = useState<SubjectWithChapters[]>(initialTree);
-  const [selectedBatch, setSelectedBatch] = useState("batch-2025");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(
     initialTree[0]?.id || ""
   );
@@ -40,20 +39,13 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
     .flatMap((s) => s.chapters)
     .find((c) => c.id === selectedChapterId);
 
-  // Batches
-  const batches = [
-    { id: "batch-2025", label: "MBBS 2025 (Final Year)" },
-    { id: "batch-usmle", label: "USMLE Step 1 Prep" },
-    { id: "batch-neetpg", label: "NEET-PG Advanced Clinicals" },
-  ];
-
   // Handle Create Subject
   const handleCreateSubject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSubjectTitle.trim()) return;
 
     setStatusMessage(null);
-    const res = await createSubject(newSubjectTitle, selectedBatch);
+    const res = await createSubject(newSubjectTitle);
     if (res.success && res.data) {
       setTree((prev) => [
         ...prev,
@@ -64,7 +56,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
       ]);
       setSelectedSubjectId(res.data.id);
       setNewSubjectTitle("");
-      setStatusMessage({ type: "success", text: `Subject "${res.data.title}" added to ${batches.find(b => b.id === selectedBatch)?.label}!` });
+      setStatusMessage({ type: "success", text: `Subject "${res.data.title}" created successfully!` });
     } else {
       setStatusMessage({ type: "error", text: res.error || "Failed to create subject" });
     }
@@ -167,7 +159,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* 4-Step Structured Architecture Stepper Guide */}
+      {/* 3-Step Structured Architecture Stepper Guide */}
       <GlassCard className="p-4 md:p-5">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -175,7 +167,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
               account_tree
             </span>
             <h3 className="font-['Space_Grotesk'] text-sm md:text-base font-bold text-white">
-              Structured Upload Architecture: Batch &rarr; Subject &rarr; Chapter &rarr; Note
+              Syllabus Structure: Subject &rarr; Chapter &rarr; Note
             </h3>
           </div>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full liquid-badge text-sky-300">
@@ -183,26 +175,11 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
           </span>
         </div>
         <p className="text-xs text-slate-300 mb-4 leading-relaxed">
-          Every clinical PDF note is indexed within a strict 4-tier hierarchy. This enables high-speed search, dynamic syllabus navigation, and automatic deep linking from student quiz mistake reviews directly into the corresponding chapter notes.
+          Every clinical PDF note is indexed by Subject and Chapter for high-speed search and direct deep linking from student quiz scorecards directly into corresponding notes.
         </p>
 
         {/* Responsive Stepper */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div className={cn(
-            "p-3 rounded-xl border transition-all text-xs flex flex-col gap-1",
-            selectedBatch
-              ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-200"
-              : "bg-white/[0.02] border-white/10 text-slate-400"
-          )}>
-            <div className="flex items-center gap-1.5 font-['Space_Grotesk'] font-bold">
-              <span className="w-5 h-5 rounded-full bg-indigo-500/30 text-indigo-300 flex items-center justify-center text-[11px]">1</span>
-              <span>Select Batch</span>
-            </div>
-            <span className="text-[11px] truncate text-slate-400">
-              {batches.find(b => b.id === selectedBatch)?.label.split(" ")[0] || "Target batch"}
-            </span>
-          </div>
-
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className={cn(
             "p-3 rounded-xl border transition-all text-xs flex flex-col gap-1",
             selectedSubjectId
@@ -210,7 +187,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
               : "bg-white/[0.02] border-white/10 text-slate-400"
           )}>
             <div className="flex items-center gap-1.5 font-['Space_Grotesk'] font-bold">
-              <span className="w-5 h-5 rounded-full bg-indigo-500/30 text-indigo-300 flex items-center justify-center text-[11px]">2</span>
+              <span className="w-5 h-5 rounded-full bg-indigo-500/30 text-indigo-300 flex items-center justify-center text-[11px]">1</span>
               <span>Choose Subject</span>
             </div>
             <span className="text-[11px] truncate text-slate-400">
@@ -225,7 +202,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
               : "bg-white/[0.02] border-white/10 text-slate-400"
           )}>
             <div className="flex items-center gap-1.5 font-['Space_Grotesk'] font-bold">
-              <span className="w-5 h-5 rounded-full bg-indigo-500/30 text-indigo-300 flex items-center justify-center text-[11px]">3</span>
+              <span className="w-5 h-5 rounded-full bg-indigo-500/30 text-indigo-300 flex items-center justify-center text-[11px]">2</span>
               <span>Target Chapter</span>
             </div>
             <span className="text-[11px] truncate text-slate-400">
@@ -240,7 +217,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
               : "bg-white/[0.02] border-white/10 text-slate-400"
           )}>
             <div className="flex items-center gap-1.5 font-['Space_Grotesk'] font-bold">
-              <span className="w-5 h-5 rounded-full bg-sky-500/30 text-sky-300 flex items-center justify-center text-[11px]">4</span>
+              <span className="w-5 h-5 rounded-full bg-sky-500/30 text-sky-300 flex items-center justify-center text-[11px]">3</span>
               <span>Upload PDF</span>
             </div>
             <span className="text-[11px] truncate text-slate-400">
@@ -255,8 +232,6 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
         <div className="px-4 py-2.5 rounded-xl liquid-glass-subtle border border-indigo-500/30 flex items-center justify-between flex-wrap gap-2 text-xs">
           <div className="flex items-center gap-2 text-slate-300 font-mono text-[11px] flex-wrap">
             <span className="text-indigo-400 font-semibold">Active Destination:</span>
-            <span>{batches.find(b => b.id === selectedBatch)?.label}</span>
-            <span>&rarr;</span>
             <span className="text-white font-medium">{activeSubject?.title}</span>
             <span>&rarr;</span>
             <span className="text-sky-300 font-bold">{activeChapter.title}</span>
@@ -289,28 +264,6 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Syllabus Structure Builder & Quick Selector */}
         <div className="lg:col-span-5 flex flex-col gap-5">
-          {/* Batch Selector Card */}
-          <GlassCard className="p-4 md:p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-['Space_Grotesk'] font-bold text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-indigo-400 text-[18px]">
-                  school
-                </span>
-                <span>Target Student Batch</span>
-              </span>
-            </div>
-            <select
-              value={selectedBatch}
-              onChange={(e) => setSelectedBatch(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl bg-[#0c0e1a] border border-white/[0.1] text-white text-xs focus:outline-none focus:border-indigo-400/70"
-            >
-              {batches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.label}
-                </option>
-              ))}
-            </select>
-          </GlassCard>
 
           {/* Create Subject Card */}
           <GlassCard className="p-5">
@@ -505,7 +458,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
                   className="rounded border-white/20 bg-white/10 text-indigo-500 focus:ring-0"
                 />
                 <span className="text-xs text-slate-300">
-                  Allow students to download raw PDF file (Unchecked = in-browser watermarked view only)
+                  Allow students to download raw PDF file (Unchecked = in-browser view only)
                 </span>
               </label>
 
@@ -570,7 +523,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
                             : "bg-amber-500/20 text-amber-300"
                         )}
                       >
-                        {note.allowDownload ? "Downloadable" : "Watermark Only"}
+                        {note.allowDownload ? "Downloadable" : "View Only"}
                       </span>
                     </div>
                   </ReadingSurface>

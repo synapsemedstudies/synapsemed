@@ -37,7 +37,6 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
       Roll_Number: s.rollNumber || "N/A",
       Full_Name: s.fullName,
       Medical_Email: s.email,
-      Batch: s.batchId || "MBBS-2025",
       Exams_Taken: s.attemptsCount,
       Average_Score_Percent: `${s.averageScorePercent}%`,
     }));
@@ -52,16 +51,14 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
   const handleDownloadRosterTemplate = () => {
     const templateData = [
       {
-        full_name: "Dr. Sarah Jenkins",
-        email: "sarah.jenkins@synapsemed.edu",
+        full_name: "Student Name A",
+        email: "student1@synapsemed.edu",
         roll_number: "MED-2025-110",
-        batch_id: "batch-2025",
       },
       {
-        full_name: "Dr. Omar Farooq",
-        email: "omar.farooq@synapsemed.edu",
+        full_name: "Student Name B",
+        email: "student2@synapsemed.edu",
         roll_number: "MED-2025-111",
-        batch_id: "batch-2025",
       },
     ];
 
@@ -121,6 +118,7 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
         role: "student",
         rollNumber: p.rollNumber,
         batchId: p.batchId || "batch-2025",
+        totpSecret: null,
         createdAt: now,
         attemptsCount: 0,
         averageScorePercent: 0,
@@ -175,10 +173,7 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="px-3 py-1.5 rounded-xl liquid-badge text-xs font-mono text-slate-300">
-            Total Students: <strong className="text-white font-bold">{roster.length}</strong>
-          </div>
-          <div className="px-3 py-1.5 rounded-xl liquid-badge text-xs font-mono text-emerald-300">
-            Target Capacity: <strong className="text-white font-bold">1,000</strong>
+            Total Enrolled: <strong className="text-white font-bold">{roster.length}</strong>
           </div>
         </div>
 
@@ -196,15 +191,12 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
         </div>
       </div>
 
-      {/* Roster Table inside ReadingSurface with 60 FPS GPU rule */}
+      {/* Roster Table inside ReadingSurface */}
       <GlassCard className="p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.08]">
           <h2 className="font-['Space_Grotesk'] text-base font-bold text-white">
             Enrolled Student Directory
           </h2>
-          <span className="text-xs font-mono text-slate-400">
-            Zero backdrop-blur on rows (60 FPS scrolling)
-          </span>
         </div>
 
         <ReadingSurface className="p-0 overflow-hidden bg-slate-950/90">
@@ -215,7 +207,6 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
                   <th className="p-3.5">Roll Number</th>
                   <th className="p-3.5">Student Name</th>
                   <th className="p-3.5">Medical Email</th>
-                  <th className="p-3.5">Batch</th>
                   <th className="p-3.5 text-center">Exams Taken</th>
                   <th className="p-3.5 text-center">Avg Score</th>
                 </tr>
@@ -234,9 +225,6 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
                     </td>
                     <td className="p-3.5 text-slate-400 font-mono">
                       {student.email}
-                    </td>
-                    <td className="p-3.5 font-mono text-indigo-300">
-                      {student.batchId || "batch-2025"}
                     </td>
                     <td className="p-3.5 text-center font-mono">
                       {student.attemptsCount}
@@ -267,8 +255,8 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
 
       {/* Bulk Roster Import Modal */}
       {importModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="relative w-full max-w-2xl bg-[#0c0e1a]/95 backdrop-blur-2xl p-6 rounded-3xl border border-white/20 shadow-2xl flex flex-col gap-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6 bg-black/80 backdrop-blur-md flex min-h-full items-start sm:items-center justify-center animate-in fade-in duration-200">
+          <div className="relative w-full max-w-2xl bg-[#0c0e1a]/95 backdrop-blur-2xl p-6 rounded-3xl border border-white/20 shadow-2xl flex flex-col gap-4 my-auto">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-indigo-400 text-[24px]">
@@ -289,7 +277,7 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
 
             {/* Template Download Prompt */}
             <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs text-slate-300">
-              <span>Spreadsheet columns: <code>full_name</code>, <code>email</code>, <code>roll_number</code>, <code>batch_id</code></span>
+              <span>Spreadsheet columns: <code>full_name</code>, <code>email</code>, <code>roll_number</code></span>
               <button
                 type="button"
                 onClick={handleDownloadRosterTemplate}

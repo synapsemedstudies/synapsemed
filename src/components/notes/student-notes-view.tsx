@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { GlassCard, ReadingSurface } from "@/components/ui/glass";
 import type { SubjectWithChapters } from "@/actions/notes";
+import { getStudentPresignedViewUrl } from "@/actions/notes";
 import type { Note } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
 interface StudentNotesViewProps {
   subjects: SubjectWithChapters[];
-  studentName: string;
-  studentRollNumber: string;
+  studentName?: string;
+  studentRollNumber?: string;
 }
 
 export function StudentNotesView({
@@ -35,19 +37,113 @@ export function StudentNotesView({
   );
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
-  // Full-Screen & Zoom Controls
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(100);
+  // Real PDF URL & Loading state
+  const [pdfUrl, setPdfUrl] = useState<string>("");
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Keyboard shortcut: Esc exits full screen
+  // Full-Screen Controls
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Fetch real presigned view URL whenever active note changes
+  useEffect(() => {
+    if (!activeNote) {
+      setPdfUrl("");
+      return;
+    }
+
+    let isMounted = true;
+    setPdfLoading(true);
+
+    getStudentPresignedViewUrl(activeNote.id)
+      .then((res) => {
+        if (isMounted) {
+          if (res.success && res.url) {
+            setPdfUrl(res.url);
+          } else {
+            setPdfUrl(`/api/mock-r2-view?key=${encodeURIComponent(activeNote.r2ObjectKey)}`);
+          }
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setPdfUrl(`/api/mock-r2-view?key=${encodeURIComponent(activeNote.r2ObjectKey)}`);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setPdfLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeNote]);
+
+  // Fullscreen Handlers (HTML5 Fullscreen API + Portal)
+  const toggleFullscreen = async () => {
+    if (!isFullscreen) {
+      try {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        } else if ((document.documentElement as unknown as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen) {
+          await (document.documentElement as unknown as { webkitRequestFullscreen: () => Promise<void> }).webkitRequestFullscreen();
+        }
+      } catch {
+        // Fallback to CSS fullscreen portal
+      }
+      setIsFullscreen(true);
+    } else {
+      await exitFullscreen();
+    }
+  };
+
+  const exitFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as unknown as { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen) {
+          await (document as unknown as { webkitExitFullscreen: () => Promise<void> }).webkitExitFullscreen();
+        }
+      }
+    } catch {
+      // ignore
+    }
+    setIsFullscreen(false);
+  };
+
+  // Sync with native Esc key or browser exit
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isFullscreen) {
+        exitFullscreen();
+      }
+    };
+
+    const handleFsChange = () => {
+      const isStillFs = Boolean(
+        document.fullscreenElement ||
+          (document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement
+      );
+      if (!isStillFs && isFullscreen) {
         setIsFullscreen(false);
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener("fullscreenchange", handleFsChange);
+    document.addEventListener("webkitfullscreenchange", handleFsChange);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("fullscreenchange", handleFsChange);
+      document.removeEventListener("webkitfullscreenchange", handleFsChange);
+    };
   }, [isFullscreen]);
 
   // Toggle complete
@@ -127,10 +223,6 @@ export function StudentNotesView({
     }
     return null;
   }, [subjects, activeNote]);
-
-  const pdfUrl = activeNote
-    ? `/api/mock-r2-view?key=${encodeURIComponent(activeNote.r2ObjectKey)}`
-    : "";
 
   return (
     <div className="flex flex-col gap-6">
@@ -286,19 +378,13 @@ export function StudentNotesView({
           </GlassCard>
         </div>
 
-        {/* Right PDF Reading Surface (with Full-Screen Capability) */}
+        {/* Right PDF Reading Surface */}
         <div className="lg:col-span-8 flex flex-col gap-4">
           {activeNote ? (
-            <GlassCard
-              className={cn(
-                "p-4 md:p-6 flex flex-col gap-4 transition-all duration-300",
-                isFullscreen &&
-                  "fixed inset-0 z-50 p-4 sm:p-6 bg-[#07080f]/95 backdrop-blur-2xl rounded-none overflow-y-auto"
-              )}
-            >
+            <GlassCard className="p-4 md:p-6 flex flex-col gap-4">
               {/* Note Header, Breadcrumb & Controls */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
-                <div>
+                <div className="overflow-hidden">
                   {activeBreadcrumb && (
                     <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5 mb-1 truncate">
                       <span>{activeBreadcrumb.subject}</span>
@@ -307,7 +393,7 @@ export function StudentNotesView({
                     </div>
                   )}
 
-                  <h2 className="font-['Space_Grotesk'] text-lg md:text-xl font-bold text-white">
+                  <h2 className="font-['Space_Grotesk'] text-lg md:text-xl font-bold text-white truncate">
                     {activeNote.title}
                   </h2>
                   <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
@@ -320,42 +406,35 @@ export function StudentNotesView({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap shrink-0">
+                  {/* Open in New Tab Button */}
+                  {pdfUrl && (
+                    <a
+                      href={pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-xl liquid-glass-subtle hover:border-white/20 text-white text-xs font-['Space_Grotesk'] font-semibold flex items-center gap-1.5 transition-all"
+                      title="Open full PDF in separate browser tab"
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-sky-300">
+                        open_in_new
+                      </span>
+                      <span>New Tab</span>
+                    </a>
+                  )}
+
                   {/* Full-screen toggle button */}
                   <button
                     type="button"
-                    onClick={() => setIsFullscreen((prev) => !prev)}
-                    className="px-3 py-1.5 rounded-xl liquid-glass-subtle hover:border-white/20 text-white text-xs font-['Space_Grotesk'] font-semibold flex items-center gap-1.5 transition-all"
-                    title={isFullscreen ? "Exit Fullscreen (Esc)" : "Fullscreen Reader View"}
+                    onClick={toggleFullscreen}
+                    className="px-3.5 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-200 text-xs font-['Space_Grotesk'] font-bold flex items-center gap-1.5 transition-all shadow-[0_2px_12px_rgba(56,189,248,0.25)] active:scale-95"
+                    title="Enter Fullscreen Reader View"
                   >
-                    <span className="material-symbols-outlined text-[16px] text-sky-300">
-                      {isFullscreen ? "fullscreen_exit" : "fullscreen"}
+                    <span className="material-symbols-outlined text-[17px] text-sky-300">
+                      fullscreen
                     </span>
-                    <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+                    <span>Fullscreen</span>
                   </button>
-
-                  {/* Zoom controls (in fullscreen) */}
-                  {isFullscreen && (
-                    <div className="flex items-center gap-1 px-2 py-1 rounded-xl liquid-glass-subtle text-xs font-mono">
-                      <button
-                        type="button"
-                        onClick={() => setZoomLevel((z) => Math.max(75, z - 25))}
-                        className="p-1 hover:text-white text-slate-400"
-                        title="Zoom out"
-                      >
-                        -
-                      </button>
-                      <span className="px-1 text-slate-200">{zoomLevel}%</span>
-                      <button
-                        type="button"
-                        onClick={() => setZoomLevel((z) => Math.min(200, z + 25))}
-                        className="p-1 hover:text-white text-slate-400"
-                        title="Zoom in"
-                      >
-                        +
-                      </button>
-                    </div>
-                  )}
 
                   {/* Mark complete */}
                   <button
@@ -371,7 +450,7 @@ export function StudentNotesView({
                     <span className="material-symbols-outlined text-[16px]">
                       {completedNoteIds.has(activeNote.id) ? "check_circle" : "check"}
                     </span>
-                    <span>{completedNoteIds.has(activeNote.id) ? "Completed" : "Mark as Read"}</span>
+                    <span>{completedNoteIds.has(activeNote.id) ? "Completed" : "Mark Read"}</span>
                   </button>
 
                   {activeNote.allowDownload ? (
@@ -389,78 +468,42 @@ export function StudentNotesView({
                       title="Admin disabled file download for this resource"
                     >
                       <span className="material-symbols-outlined text-[14px]">lock</span>
-                      <span>Watermark Only</span>
+                      <span>View Only</span>
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* High-Contrast Reading Surface with Watermark Canvas and Embedded Viewer */}
-              <ReadingSurface
-                className={cn(
-                  "relative overflow-hidden p-6 bg-slate-950/95 flex flex-col justify-between transition-all",
-                  isFullscreen ? "min-h-[calc(100vh-140px)]" : "min-h-[580px]"
+              {/* High-Contrast Reading Surface with Clean Embedded PDF Viewer */}
+              <ReadingSurface className="relative overflow-hidden p-3 sm:p-4 bg-slate-950/95 flex flex-col min-h-[640px] h-[720px] rounded-2xl">
+                {pdfLoading ? (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-3 py-24 text-slate-400 relative z-10">
+                    <span className="material-symbols-outlined animate-spin text-[32px] text-sky-400">
+                      progress_activity
+                    </span>
+                    <span className="text-xs font-['Space_Grotesk'] font-medium">
+                      Loading secured PDF note from Cloudflare R2...
+                    </span>
+                  </div>
+                ) : pdfUrl ? (
+                  <div className="relative z-10 flex-1 w-full h-full flex flex-col rounded-xl overflow-hidden bg-slate-900 border border-white/10">
+                    <iframe
+                      src={pdfUrl}
+                      className="w-full flex-1 h-full min-h-[580px] border-0 rounded-xl bg-slate-900"
+                      title={activeNote.title}
+                      allow="fullscreen"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-slate-400 text-xs">
+                    Unable to load PDF stream.
+                  </div>
                 )}
-                style={{
-                  transform: isFullscreen && zoomLevel !== 100 ? `scale(${zoomLevel / 100})` : undefined,
-                  transformOrigin: "top center",
-                }}
-              >
-                {/* Anti-Leak Diagonal Watermark Layer */}
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 pointer-events-none select-none overflow-hidden z-30 flex flex-col justify-around opacity-[0.08] rotate-[-25deg] scale-125"
-                >
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="text-white text-sm font-mono whitespace-nowrap tracking-widest text-center"
-                    >
-                      SYNAPSEMED • {studentName.toUpperCase()} • {studentRollNumber} • CONFIDENTIAL MEDICAL NOTE
-                    </div>
-                  ))}
-                </div>
-
-                {/* PDF Content Canvas / Mock Reader */}
-                <div className="relative z-10 flex flex-col gap-6 text-slate-200">
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[11px] font-mono uppercase tracking-wider text-sky-300">
-                        Section 1: Clinical Framework &amp; Core Diagnostics
-                      </span>
-                      <span className="text-xs text-slate-400 font-mono">Page 1 of 4</span>
-                    </div>
-                    <p className="text-xs sm:text-sm md:text-base leading-relaxed text-slate-300">
-                      Modified Duke criteria diagnostic framework: Definite diagnosis requires 2 Major criteria, 1 Major + 3 Minor criteria, or 5 Minor criteria. Major criteria include positive blood cultures for typical organisms (e.g. S. viridans, S. aureus, Enterococcus) from separate venipunctures, and evidence of endocardial involvement demonstrated on echocardiography (vegetation, abscess, or new partial dehiscence of prosthetic valve).
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                    <span className="text-[11px] font-mono uppercase tracking-wider text-indigo-300 block mb-2">
-                      Section 2: Pharmacotherapy &amp; Empiric Coverage
-                    </span>
-                    <p className="text-xs sm:text-sm md:text-base leading-relaxed text-slate-300">
-                      Native valve empiric regimen: Ampicillin-Sulbactam plus Gentamicin (or Vancomycin plus Gentamicin in penicillin-allergic patients). Prosthetic valve empiric coverage: Vancomycin plus Gentamicin plus Rifampin (minimum 6 weeks duration). Renal monitoring parameters must be tracked weekly for trough aminoglycoside concentrations.
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                    <span className="text-[11px] font-mono uppercase tracking-wider text-purple-300 block mb-2">
-                      Section 3: Key Surgical Indications
-                    </span>
-                    <ul className="text-xs sm:text-sm md:text-base text-slate-300 list-disc list-inside space-y-1">
-                      <li>Refractory cardiogenic shock or acute severe aortic/mitral regurgitation</li>
-                      <li>Uncontrolled infection (persistent bacteremia &gt; 7 days despite targeted therapy)</li>
-                      <li>Perivalvular abscess, fistula, or enlarging vegetation (&gt; 10 mm with prior emboli)</li>
-                      <li>Fungal endocarditis or highly resistant pathogens</li>
-                    </ul>
-                  </div>
-                </div>
 
                 {/* Document Footer */}
-                <div className="relative z-10 pt-4 mt-6 border-t border-white/10 flex items-center justify-between text-xs text-slate-400 font-mono">
-                  <span>SynapseMed Verified Clinical Material</span>
-                  <span>Watermarked to: {studentRollNumber}</span>
+                <div className="relative z-10 pt-3 mt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-400 font-mono">
+                  <span>SynapseMed Clinical Study Material</span>
+                  <span className="text-sky-400/80">Secured Presigned Stream</span>
                 </div>
               </ReadingSurface>
             </GlassCard>
@@ -471,6 +514,99 @@ export function StudentNotesView({
           )}
         </div>
       </div>
+
+      {/* True Fullscreen Portal (Mounted directly to document.body to break out of all parent constraints) */}
+      {mounted && isFullscreen && activeNote && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={fullscreenContainerRef}
+            className="fixed inset-0 z-[99999] w-screen h-screen bg-[#07080f] flex flex-col p-3 sm:p-4 select-none animate-in fade-in duration-200"
+          >
+            {/* Fullscreen Top Navigation Bar */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0 gap-3">
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-500/40 text-sky-400 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(56,189,248,0.3)]">
+                  <span className="material-symbols-outlined text-[20px]">menu_book</span>
+                </div>
+                <div className="flex flex-col truncate">
+                  <span className="font-['Space_Grotesk'] text-sm sm:text-base font-bold text-white truncate">
+                    {activeNote.title}
+                  </span>
+                  {activeBreadcrumb && (
+                    <span className="text-[10px] text-slate-400 font-mono truncate">
+                      {activeBreadcrumb.subject} &rarr; {activeBreadcrumb.chapter}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {pdfUrl && (
+                  <a
+                    href={pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-xl liquid-glass-subtle hover:border-white/20 text-white text-xs font-['Space_Grotesk'] font-semibold flex items-center gap-1.5 transition-all"
+                    title="Open in separate tab"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                    <span className="hidden sm:inline">New Tab</span>
+                  </a>
+                )}
+
+                {activeNote.allowDownload && (
+                  <a
+                    href={pdfUrl}
+                    download
+                    className="px-3 py-1.5 rounded-xl liquid-btn-primary text-white text-xs font-['Space_Grotesk'] font-semibold flex items-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">download</span>
+                    <span className="hidden sm:inline">Download</span>
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  onClick={exitFullscreen}
+                  className="px-3.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs font-['Space_Grotesk'] font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-[0_2px_12px_rgba(244,63,94,0.3)]"
+                  title="Exit Fullscreen (Esc)"
+                >
+                  <span className="material-symbols-outlined text-[16px]">fullscreen_exit</span>
+                  <span>Exit Fullscreen</span>
+                  <kbd className="hidden sm:inline text-[9px] px-1.5 py-0.5 rounded bg-black/50 border border-white/10 font-mono text-slate-300">
+                    Esc
+                  </kbd>
+                </button>
+              </div>
+            </div>
+
+            {/* Fullscreen PDF Reader */}
+            <div className="relative flex-1 w-full h-full mt-3 rounded-xl overflow-hidden bg-slate-950 border border-white/10 flex flex-col">
+              {pdfLoading ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
+                  <span className="material-symbols-outlined animate-spin text-[36px] text-sky-400">
+                    progress_activity
+                  </span>
+                  <span className="text-xs font-['Space_Grotesk']">
+                    Loading secured PDF document...
+                  </span>
+                </div>
+              ) : pdfUrl ? (
+                <iframe
+                  src={pdfUrl}
+                  className="w-full flex-1 h-full border-0 rounded-xl bg-slate-900"
+                  title={activeNote.title}
+                  allow="fullscreen"
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-slate-400 text-xs">
+                  Unable to load PDF stream.
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

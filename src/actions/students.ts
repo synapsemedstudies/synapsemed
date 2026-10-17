@@ -26,75 +26,46 @@ export async function getStudentRoster(): Promise<StudentRosterItem[]> {
   await requireAdmin();
 
   try {
-    const rawStudents = await db
-      .select()
-      .from(users)
-      .where(eq(users.role, "student"))
-      .orderBy(desc(users.createdAt));
-
-    const roster: StudentRosterItem[] = [];
-
-    for (const st of rawStudents) {
-      const attempts = await db
+    const [rawStudents, allAttempts] = await Promise.all([
+      db
         .select()
-        .from(quizAttempts)
-        .where(eq(quizAttempts.studentId, st.id));
+        .from(users)
+        .where(eq(users.role, "student"))
+        .orderBy(desc(users.createdAt)),
+      db
+        .select({
+          studentId: quizAttempts.studentId,
+          score: quizAttempts.score,
+          totalMarks: quizAttempts.totalMarks,
+        })
+        .from(quizAttempts),
+    ]);
 
-      let avg = 0;
-      if (attempts.length > 0) {
-        const sum = attempts.reduce(
-          (acc, a) =>
-            acc + (parseFloat(a.score) / (parseFloat(a.totalMarks) || 1)) * 100,
-          0
-        );
-        avg = Math.round(sum / attempts.length);
-      }
-
-      roster.push({
-        ...st,
-        attemptsCount: attempts.length,
-        averageScorePercent: avg,
-      });
+    // Group attempts by studentId in-memory (0ms)
+    const attemptsByStudent = new Map<string, { count: number; totalPct: number }>();
+    for (const a of allAttempts) {
+      const cur = attemptsByStudent.get(a.studentId) || { count: 0, totalPct: 0 };
+      const pct = (parseFloat(a.score) / (parseFloat(a.totalMarks) || 1)) * 100;
+      cur.count += 1;
+      cur.totalPct += pct;
+      attemptsByStudent.set(a.studentId, cur);
     }
 
-    return roster;
-  } catch {
-    // Fallback sample roster if database is unseeded
-    return [
-      {
-        id: "st-01",
-        email: "alex.rivera@synapsemed.edu",
-        fullName: "Alex Rivera",
-        role: "student",
-        rollNumber: "MED-2025-084",
-        batchId: "batch-2025",
-        createdAt: new Date(),
-        attemptsCount: 3,
-        averageScorePercent: 82,
-      },
-      {
-        id: "st-02",
-        email: "priya.sharma@synapsemed.edu",
-        fullName: "Priya Sharma",
-        role: "student",
-        rollNumber: "MED-2025-091",
-        batchId: "batch-2025",
-        createdAt: new Date(),
-        attemptsCount: 4,
-        averageScorePercent: 91,
-      },
-      {
-        id: "st-03",
-        email: "marcus.chen@synapsemed.edu",
-        fullName: "Marcus Chen",
-        role: "student",
-        rollNumber: "MED-2025-104",
-        batchId: "batch-2025",
-        createdAt: new Date(),
-        attemptsCount: 2,
-        averageScorePercent: 74,
-      },
-    ];
+    return rawStudents.map((st) => {
+      const stats = attemptsByStudent.get(st.id);
+      const attemptsCount = stats?.count || 0;
+      const averageScorePercent =
+        attemptsCount > 0 ? Math.round(stats!.totalPct / attemptsCount) : 0;
+
+      return {
+        ...st,
+        attemptsCount,
+        averageScorePercent,
+      };
+    });
+  } catch (err) {
+    console.error("Failed to fetch student roster:", err);
+    return [];
   }
 }
 

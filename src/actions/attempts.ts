@@ -6,7 +6,6 @@ import {
   quizzes,
   quizQuestions,
   quizAttempts,
-  mistakeItems,
   type Quiz,
   type QuizQuestion,
   type QuizAttempt,
@@ -33,7 +32,7 @@ export interface QuizAttemptResult {
 /**
  * Server Action to grade and submit a student's quiz attempt.
  * Enforces requireStudent() as its very first line.
- * Transactionally inserts quiz_attempts and upserts mistake_items.
+ * Records student quiz_attempts with score breakdown.
  */
 export async function submitQuizAttempt(
   input: SubmitAttemptInput
@@ -70,7 +69,6 @@ export async function submitQuizAttempt(
     let correctCount = 0;
     let incorrectCount = 0;
     let unansweredCount = 0;
-    const missedQuestions: { questionId: string; chapterSlug: string | null }[] = [];
 
     for (const q of questions) {
       const marks = parseFloat(q.marks) || 4;
@@ -87,72 +85,31 @@ export async function submitQuizAttempt(
       } else {
         incorrectCount++;
         calculatedScore -= negMarks;
-        missedQuestions.push({
-          questionId: q.id,
-          chapterSlug: q.chapterSlug,
-        });
       }
     }
 
     // Ensure score does not go below 0
     calculatedScore = Math.max(0, calculatedScore);
 
-    // 2. Transaction: Insert attempt and upsert missed questions into mistake_items
-    const attemptId = await db.transaction(async (tx) => {
-      // Insert or update attempt
-      const [attempt] = await tx
-        .insert(quizAttempts)
-        .values({
-          quizId: input.quizId,
-          studentId: student.id,
-          score: calculatedScore.toFixed(2),
-          totalMarks: totalPossibleMarks.toFixed(2),
-          answersJson: input.answers,
-          timeTakenSeconds: input.timeTakenSeconds,
-        })
-        .returning({ id: quizAttempts.id });
-
-      // Record missed questions in mistake_items
-      for (const missed of missedQuestions) {
-        // Check if item already exists
-        const [existing] = await tx
-          .select()
-          .from(mistakeItems)
-          .where(
-            and(
-              eq(mistakeItems.studentId, student.id),
-              eq(mistakeItems.questionId, missed.questionId)
-            )
-          );
-
-        if (existing) {
-          await tx
-            .update(mistakeItems)
-            .set({
-              resolved: false,
-              lastMissedAt: new Date(),
-            })
-            .where(eq(mistakeItems.id, existing.id));
-        } else {
-          await tx.insert(mistakeItems).values({
-            studentId: student.id,
-            questionId: missed.questionId,
-            chapterSlug: missed.chapterSlug,
-            resolved: false,
-          });
-        }
-      }
-
-      return attempt.id;
-    });
+    // 2. Insert quiz attempt record
+    const [attempt] = await db
+      .insert(quizAttempts)
+      .values({
+        quizId: input.quizId,
+        studentId: student.id,
+        score: calculatedScore.toFixed(2),
+        totalMarks: totalPossibleMarks.toFixed(2),
+        answersJson: input.answers,
+        timeTakenSeconds: input.timeTakenSeconds,
+      })
+      .returning({ id: quizAttempts.id });
 
     revalidatePath("/dashboard/quizzes");
-    revalidatePath("/dashboard/mistakes");
 
     return {
       success: true,
       data: {
-        attemptId,
+        attemptId: attempt.id,
         score: calculatedScore,
         totalMarks: totalPossibleMarks,
         correctCount,

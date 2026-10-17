@@ -56,11 +56,11 @@ export function QuizResultView({
           </Link>
 
           <Link
-            href="/dashboard/mistakes"
+            href="/dashboard/quizzes"
             className="px-4 py-2 rounded-xl liquid-btn-primary text-white text-xs font-['Space_Grotesk'] font-semibold flex items-center gap-1.5"
           >
-            <span className="material-symbols-outlined text-[16px]">history_edu</span>
-            <span>Mistake Notebook</span>
+            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+            <span>All Quizzes</span>
           </Link>
         </div>
       </div>
