@@ -17,6 +17,12 @@ interface MobileBottomNavProps {
 
 export function MobileBottomNav({ items }: MobileBottomNavProps) {
   const pathname = usePathname();
+  const [optimisticHref, setOptimisticHref] = React.useState<string | null>(null);
+  const effectivePath = optimisticHref || pathname;
+
+  React.useEffect(() => {
+    setOptimisticHref(null);
+  }, [pathname]);
 
   return (
     <nav
@@ -25,15 +31,16 @@ export function MobileBottomNav({ items }: MobileBottomNavProps) {
     >
       {items.map((item) => {
         const isActive =
-          pathname === item.href ||
+          effectivePath === item.href ||
           (item.href !== "/dashboard" &&
             item.href !== "/admin" &&
-            pathname.startsWith(item.href));
+            effectivePath.startsWith(item.href));
 
         return (
           <Link
             key={item.href}
             href={item.href}
+            onClick={() => setOptimisticHref(item.href)}
             className={cn(
               "flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-200",
               isActive

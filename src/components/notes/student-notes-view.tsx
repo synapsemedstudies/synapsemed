@@ -19,17 +19,8 @@ export function StudentNotesView({
   studentName,
   studentRollNumber,
 }: StudentNotesViewProps) {
-  // Find first note as default
-  const defaultNote = useMemo(() => {
-    for (const sub of subjects) {
-      for (const ch of sub.chapters) {
-        if (ch.notes.length > 0) return ch.notes[0];
-      }
-    }
-    return null;
-  }, [subjects]);
-
-  const [activeNote, setActiveNote] = useState<Note | null>(defaultNote);
+  // Do not load any PDF notes by default until clicked
+  const [activeNote, setActiveNote] = useState<Note | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [completedNoteIds, setCompletedNoteIds] = useState<Set<string>>(new Set());
   const [expandedSubjectIds, setExpandedSubjectIds] = useState<Set<string>>(
@@ -339,14 +330,20 @@ export function StudentNotesView({
                                     )}
                                   >
                                     <div className="flex items-center gap-2 overflow-hidden">
-                                      <span
-                                        className={cn(
-                                          "material-symbols-outlined text-[16px] shrink-0",
-                                          isDone ? "text-emerald-400" : "text-slate-400"
-                                        )}
-                                      >
-                                        {isDone ? "check_circle" : "description"}
-                                      </span>
+                                      {pdfLoading && isSelected ? (
+                                        <span className="material-symbols-outlined text-[16px] text-sky-400 animate-spin shrink-0">
+                                          progress_activity
+                                        </span>
+                                      ) : (
+                                        <span
+                                          className={cn(
+                                            "material-symbols-outlined text-[16px] shrink-0",
+                                            isDone ? "text-emerald-400" : isSelected ? "text-sky-300" : "text-slate-400"
+                                          )}
+                                        >
+                                          {isDone ? "check_circle" : "description"}
+                                        </span>
+                                      )}
                                       <span className="truncate">{note.title}</span>
                                     </div>
 
@@ -477,13 +474,28 @@ export function StudentNotesView({
               {/* High-Contrast Reading Surface with Clean Embedded PDF Viewer */}
               <ReadingSurface className="relative overflow-hidden p-3 sm:p-4 bg-slate-950/95 flex flex-col min-h-[640px] h-[720px] rounded-2xl">
                 {pdfLoading ? (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-3 py-24 text-slate-400 relative z-10">
-                    <span className="material-symbols-outlined animate-spin text-[32px] text-sky-400">
-                      progress_activity
-                    </span>
-                    <span className="text-xs font-['Space_Grotesk'] font-medium">
-                      Loading secured PDF note from Cloudflare R2...
-                    </span>
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 py-16 text-slate-400 relative z-10 w-full animate-pulse">
+                    <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                      <span className="material-symbols-outlined animate-spin text-[28px]">
+                        progress_activity
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1.5 text-center max-w-sm">
+                      <span className="text-sm font-['Space_Grotesk'] font-semibold text-white">
+                        Streaming Encrypted PDF Note...
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        Generating secure 15-minute Cloudflare R2 presigned stream for {activeNote.title}
+                      </span>
+                    </div>
+                    {/* Lightweight Document Skeleton Preview */}
+                    <div className="w-full max-w-md mt-6 space-y-3 opacity-60">
+                      <div className="h-4 bg-white/10 rounded-md w-3/4 mx-auto" />
+                      <div className="h-3 bg-white/5 rounded-md w-full" />
+                      <div className="h-3 bg-white/5 rounded-md w-5/6 mx-auto" />
+                      <div className="h-3 bg-white/5 rounded-md w-4/6 mx-auto" />
+                      <div className="h-32 bg-white/[0.03] border border-white/5 rounded-xl w-full mt-4" />
+                    </div>
                   </div>
                 ) : pdfUrl ? (
                   <div className="relative z-10 flex-1 w-full h-full flex flex-col rounded-xl overflow-hidden bg-slate-900 border border-white/10">
@@ -508,8 +520,30 @@ export function StudentNotesView({
               </ReadingSurface>
             </GlassCard>
           ) : (
-            <ReadingSurface className="p-12 text-center text-slate-400">
-              Select a chapter from the syllabus tree to open study notes.
+            <ReadingSurface className="p-8 sm:p-12 min-h-[480px] flex flex-col items-center justify-center text-center bg-slate-950/80 rounded-2xl border border-white/10">
+              <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shadow-[0_0_24px_rgba(99,102,241,0.2)] mb-4">
+                <span className="material-symbols-outlined text-[32px]">menu_book</span>
+              </div>
+              <h3 className="font-['Space_Grotesk'] text-lg sm:text-xl font-bold text-white mb-2">
+                Select a Clinical Note to Begin Reading
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-400 max-w-md leading-relaxed mb-6">
+                Choose any chapter note from the syllabus on the left. Notes are streamed securely on-demand with zero background data usage until clicked.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2 max-w-lg text-[11px] font-mono text-slate-400">
+                <span className="px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[14px] text-sky-400">lock_clock</span>
+                  15-Min Presigned R2
+                </span>
+                <span className="px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[14px] text-emerald-400">battery_charging_full</span>
+                  Zero Preload Lag
+                </span>
+                <span className="px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[14px] text-purple-400">fullscreen</span>
+                  Fullscreen Mode (Esc)
+                </span>
+              </div>
             </ReadingSurface>
           )}
         </div>

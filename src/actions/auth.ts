@@ -81,21 +81,37 @@ export async function signupStudentAction(
     return { error: "Password must be at least 6 characters long." };
   }
 
-  // Check if user already exists in DB
-  const [existingUser] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
+  // 1. Pre-flight check: Prevent collisions in PostgreSQL database
+  try {
+    const [existingUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
 
-  if (existingUser) {
-    return { error: "An account with this email address already exists." };
+    if (existingUser) {
+      return { error: "An account with this email address already exists. Please sign in instead." };
+    }
+
+    if (rollNumber) {
+      const [existingRoll] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.rollNumber, rollNumber))
+        .limit(1);
+
+      if (existingRoll) {
+        return { error: `Student Roll Number "${rollNumber}" is already registered to another account.` };
+      }
+    }
+  } catch (dbCheckErr) {
+    console.warn("DB pre-flight check warning:", dbCheckErr);
   }
 
   const supabaseAdmin = getAdminClient();
   const totpSecret = null;
 
-  // 1. Create in Supabase Auth
+  // 2. Create in Supabase Auth with collision detection
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -109,10 +125,18 @@ export async function signupStudentAction(
   });
 
   if (authError || !authData.user) {
-    return { error: authError?.message || "Could not create authentication account." };
+    const errorMsg = authError?.message || "";
+    if (
+      errorMsg.toLowerCase().includes("already registered") ||
+      errorMsg.toLowerCase().includes("already exists") ||
+      (authError as { status?: number })?.status === 422
+    ) {
+      return { error: "An account with this email address already exists. Please sign in instead." };
+    }
+    return { error: errorMsg || "Could not create authentication account. Please try again." };
   }
 
-  // 2. Insert into PostgreSQL users table
+  // 3. Insert into PostgreSQL users table with unique constraint rollback
   try {
     await db.insert(users).values({
       id: authData.user.id,
@@ -123,11 +147,29 @@ export async function signupStudentAction(
       batchId,
       totpSecret,
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("DB Insert Error on student signup:", err);
     // Rollback auth user if DB insert fails
-    await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-    return { error: "Failed to create student profile in database." };
+    try {
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+    } catch {
+      // ignore rollback deletion error
+    }
+
+    // Inspect Postgres unique constraint violation (Error code 23505)
+    const pgErr = err as { code?: string; detail?: string; message?: string };
+    if (
+      pgErr?.code === "23505" ||
+      pgErr?.message?.toLowerCase().includes("unique") ||
+      pgErr?.detail?.toLowerCase().includes("already exists")
+    ) {
+      if (pgErr?.detail?.includes("roll_number") || pgErr?.message?.includes("roll_number")) {
+        return { error: `Student Roll Number "${rollNumber}" is already registered.` };
+      }
+      return { error: "An account with this email address already exists. Please sign in instead." };
+    }
+
+    return { error: "Failed to create student profile in database. Please try again." };
   }
 
   // 3. Automatically sign in the new student

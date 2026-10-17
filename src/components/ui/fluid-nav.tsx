@@ -19,6 +19,8 @@ export interface FluidNavProps {
 
 export function FluidNav({ items, className }: FluidNavProps) {
   const pathname = usePathname();
+  const [optimisticHref, setOptimisticHref] = useState<string | null>(null);
+  const effectivePath = optimisticHref || pathname;
   const containerRef = useRef<HTMLDivElement>(null);
   const [pillStyle, setPillStyle] = useState<{
     left: number;
@@ -30,22 +32,27 @@ export function FluidNav({ items, className }: FluidNavProps) {
     opacity: 0,
   });
 
+  // Reset optimistic state whenever the actual pathname changes
+  useEffect(() => {
+    setOptimisticHref(null);
+  }, [pathname]);
+
   const updatePill = useCallback(() => {
     if (!containerRef.current) return;
 
-    // Find the item matching current pathname best
-    let activeIndex = items.findIndex((item) => item.href === pathname);
+    // Find the item matching current effective path best
+    let activeIndex = items.findIndex((item) => item.href === effectivePath);
     if (activeIndex === -1) {
       activeIndex = items.findIndex(
         (item) =>
           item.href !== "/dashboard" &&
           item.href !== "/admin" &&
-          pathname.startsWith(item.href)
+          effectivePath.startsWith(item.href)
       );
     }
     if (activeIndex === -1) {
       // Default fallback to first matching base path
-      if (pathname.startsWith("/admin")) {
+      if (effectivePath.startsWith("/admin")) {
         activeIndex = items.findIndex((item) => item.href === "/admin");
       } else {
         activeIndex = items.findIndex((item) => item.href === "/dashboard");
@@ -68,7 +75,7 @@ export function FluidNav({ items, className }: FluidNavProps) {
     }
 
     setPillStyle((prev) => ({ ...prev, opacity: 0 }));
-  }, [items, pathname]);
+  }, [items, effectivePath]);
 
   useEffect(() => {
     updatePill();
@@ -96,16 +103,17 @@ export function FluidNav({ items, className }: FluidNavProps) {
 
       {items.map((item) => {
         const isActive =
-          pathname === item.href ||
+          effectivePath === item.href ||
           (item.href !== "/dashboard" &&
             item.href !== "/admin" &&
-            pathname.startsWith(item.href));
+            effectivePath.startsWith(item.href));
 
         return (
           <Link
             key={item.href}
             href={item.href}
             data-nav-item="true"
+            onClick={() => setOptimisticHref(item.href)}
             className={cn(
               "relative z-10 px-4 py-1.5 text-xs font-['Space_Grotesk'] font-semibold rounded-full transition-colors duration-200 flex items-center gap-1.5",
               isActive

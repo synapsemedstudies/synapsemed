@@ -34,8 +34,22 @@ export function SignupForm() {
   return (
     <form action={formAction} className="flex flex-col gap-3.5">
       {state?.error && (
-        <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs text-center font-medium">
-          {state.error}
+        <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex flex-col gap-2">
+          <div className="flex items-start gap-2">
+            <span className="material-symbols-outlined text-[18px] text-rose-400 shrink-0 mt-0.5">
+              error
+            </span>
+            <span className="leading-snug">{state.error}</span>
+          </div>
+          {(state.error.includes("already exists") || state.error.includes("already registered")) && (
+            <Link
+              href="/login"
+              className="mt-1 px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-white font-semibold text-center transition-all inline-flex items-center justify-center gap-1.5"
+            >
+              <span>Sign In to existing account</span>
+              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            </Link>
+          )}
         </div>
       )}
 
