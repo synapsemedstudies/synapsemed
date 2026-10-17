@@ -3,8 +3,8 @@
 import { requireAdmin, requireStudent } from "@/lib/auth";
 import { db } from "@/db";
 import { subjects, chapters, notes, type Subject, type Chapter, type Note } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
-import { getPresignedUploadUrl, getPresignedViewUrl } from "@/lib/r2";
+import { eq, asc, inArray } from "drizzle-orm";
+import { getPresignedUploadUrl, getPresignedViewUrl, deleteR2Object } from "@/lib/r2";
 import { revalidatePath } from "next/cache";
 
 export interface SubjectWithChapters extends Subject {
@@ -274,6 +274,81 @@ export async function createNoteRecord(
     return { success: false, error: message };
   }
 }
+
+/**
+ * Admin action to delete a single Note and its R2 object
+ */
+export async function deleteNote(noteId: string) {
+  await requireAdmin();
+
+  try {
+    const [foundNote] = await db.select().from(notes).where(eq(notes.id, noteId)).limit(1);
+
+    if (foundNote) {
+      await deleteR2Object(foundNote.r2ObjectKey);
+      await db.delete(notes).where(eq(notes.id, noteId));
+    }
+
+    revalidatePath("/admin/notes");
+    revalidatePath("/dashboard/notes");
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to delete note";
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Admin action to delete a Chapter (folder), all child notes, and their R2 objects
+ */
+export async function deleteChapter(chapterId: string) {
+  await requireAdmin();
+
+  try {
+    // Find all notes in this chapter to delete storage objects
+    const childNotes = await db.select().from(notes).where(eq(notes.chapterId, chapterId));
+    await Promise.all(childNotes.map((n) => deleteR2Object(n.r2ObjectKey)));
+
+    // Cascade delete in PostgreSQL handles notes removal, but we execute explicit chapter delete
+    await db.delete(chapters).where(eq(chapters.id, chapterId));
+
+    revalidatePath("/admin/notes");
+    revalidatePath("/dashboard/notes");
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to delete chapter";
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Admin action to delete a Subject, all its chapters, all child notes, and their R2 objects
+ */
+export async function deleteSubject(subjectId: string) {
+  await requireAdmin();
+
+  try {
+    // Find all chapters in this subject
+    const subjectChapters = await db.select().from(chapters).where(eq(chapters.subjectId, subjectId));
+    const chapterIds = subjectChapters.map((c) => c.id);
+
+    if (chapterIds.length > 0) {
+      const childNotes = await db.select().from(notes).where(inArray(notes.chapterId, chapterIds));
+      await Promise.all(childNotes.map((n) => deleteR2Object(n.r2ObjectKey)));
+    }
+
+    // Cascade delete in PostgreSQL handles chapters & notes removal
+    await db.delete(subjects).where(eq(subjects.id, subjectId));
+
+    revalidatePath("/admin/notes");
+    revalidatePath("/dashboard/notes");
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to delete subject";
+    return { success: false, error: message };
+  }
+}
+
 
 /**
  * Student action to obtain a 15-minute presigned read URL

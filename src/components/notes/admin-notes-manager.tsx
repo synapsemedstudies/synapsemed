@@ -8,6 +8,9 @@ import {
   createChapter,
   getAdminNoteUploadUrl,
   createNoteRecord,
+  deleteNote,
+  deleteChapter,
+  deleteSubject,
 } from "@/actions/notes";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +34,7 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
   const [noteTitle, setNoteTitle] = useState("");
   const [allowDownload, setAllowDownload] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Active Subject & Chapter objects
@@ -157,6 +161,124 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
     }
   };
 
+  // Handle Delete Subject
+  const handleDeleteSubject = async (subjectId: string, subjectTitle: string, chapterCount: number) => {
+    const warning =
+      chapterCount > 0
+        ? `Are you sure you want to delete subject "${subjectTitle}" and all ${chapterCount} chapter(s)/notes inside it? This cannot be undone.`
+        : `Are you sure you want to delete subject "${subjectTitle}"?`;
+
+    if (!confirm(warning)) return;
+
+    setIsDeleting(true);
+    setStatusMessage(null);
+
+    const res = await deleteSubject(subjectId);
+    setIsDeleting(false);
+
+    if (res.success) {
+      const updatedTree = tree.filter((s) => s.id !== subjectId);
+      setTree(updatedTree);
+
+      if (selectedSubjectId === subjectId) {
+        const nextSub = updatedTree[0];
+        setSelectedSubjectId(nextSub?.id || "");
+        setSelectedChapterId(nextSub?.chapters[0]?.id || "");
+      }
+
+      setStatusMessage({
+        type: "success",
+        text: `Subject "${subjectTitle}" was deleted successfully.`,
+      });
+    } else {
+      setStatusMessage({
+        type: "error",
+        text: res.error || "Failed to delete subject",
+      });
+    }
+  };
+
+  // Handle Delete Chapter (Folder)
+  const handleDeleteChapter = async (chapterId: string, chapterTitle: string, noteCount: number) => {
+    const warning =
+      noteCount > 0
+        ? `Are you sure you want to delete folder "${chapterTitle}" and all ${noteCount} note(s) inside it? This cannot be undone.`
+        : `Are you sure you want to delete folder "${chapterTitle}"?`;
+
+    if (!confirm(warning)) return;
+
+    setIsDeleting(true);
+    setStatusMessage(null);
+
+    const res = await deleteChapter(chapterId);
+    setIsDeleting(false);
+
+    if (res.success) {
+      setTree((prev) =>
+        prev.map((sub) => ({
+          ...sub,
+          chapters: sub.chapters.filter((ch) => ch.id !== chapterId),
+        }))
+      );
+
+      if (selectedChapterId === chapterId) {
+        const currentSub = tree.find((s) => s.chapters.some((ch) => ch.id === chapterId));
+        const remainingChapters = currentSub?.chapters.filter((ch) => ch.id !== chapterId) || [];
+        setSelectedChapterId(remainingChapters[0]?.id || "");
+      }
+
+      setStatusMessage({
+        type: "success",
+        text: `Folder "${chapterTitle}" was deleted successfully.`,
+      });
+    } else {
+      setStatusMessage({
+        type: "error",
+        text: res.error || "Failed to delete folder",
+      });
+    }
+  };
+
+  // Handle Delete Note
+  const handleDeleteNote = async (noteId: string, noteTitle: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete note "${noteTitle}"? This will remove the PDF from storage and cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setStatusMessage(null);
+
+    const res = await deleteNote(noteId);
+    setIsDeleting(false);
+
+    if (res.success) {
+      setTree((prev) =>
+        prev.map((sub) => ({
+          ...sub,
+          chapters: sub.chapters.map((ch) => ({
+            ...ch,
+            notes: ch.notes.filter((n) => n.id !== noteId),
+          })),
+        }))
+      );
+
+      setStatusMessage({
+        type: "success",
+        text: `Note "${noteTitle}" was deleted successfully.`,
+      });
+    } else {
+      setStatusMessage({
+        type: "error",
+        text: res.error || "Failed to delete note",
+      });
+    }
+  };
+
+
   return (
     <div className="flex flex-col gap-6">
       {/* 3-Step Structured Architecture Stepper Guide */}
@@ -237,9 +359,27 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
             <span className="text-sky-300 font-bold">{activeChapter.title}</span>
             <span className="text-slate-500">({activeChapter.slug})</span>
           </div>
-          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-            Target Ready for PDF
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              Target Ready for PDF
+            </span>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() =>
+                handleDeleteChapter(
+                  activeChapter.id,
+                  activeChapter.title,
+                  activeChapter.notes.length
+                )
+              }
+              className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-[11px] font-['Space_Grotesk'] font-semibold flex items-center gap-1 transition-all disabled:opacity-50"
+              title={`Delete folder "${activeChapter.title}"`}
+            >
+              <span className="material-symbols-outlined text-[14px]">delete</span>
+              <span>Delete Folder</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -372,40 +512,66 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
             </span>
             <div className="flex flex-col gap-2">
               {tree.map((sub) => (
-                <div key={sub.id} className="flex flex-col gap-1 border-b border-white/[0.05] pb-2 last:border-b-0">
-                  <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 px-1">
-                    <span className="material-symbols-outlined text-[14px] text-indigo-400">folder</span>
-                    <span>{sub.title}</span>
-                  </span>
+                <div key={sub.id} className="flex flex-col gap-1 border-b border-white/[0.05] pb-2 last:border-b-0 group/sub">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[15px] text-indigo-400">folder</span>
+                      <span className="truncate">{sub.title}</span>
+                      <span className="text-[10px] text-slate-500 font-mono">({sub.chapters.length})</span>
+                    </span>
+
+                    <button
+                      type="button"
+                      disabled={isDeleting}
+                      onClick={() => handleDeleteSubject(sub.id, sub.title, sub.chapters.length)}
+                      className="opacity-40 hover:opacity-100 p-1 rounded-md hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-all text-xs shrink-0"
+                      title={`Delete subject "${sub.title}" and its contents`}
+                    >
+                      <span className="material-symbols-outlined text-[14px]">delete</span>
+                    </button>
+                  </div>
 
                   <div className="ml-3 flex flex-col gap-1">
                     {sub.chapters.map((ch) => (
-                      <button
-                        key={ch.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedSubjectId(sub.id);
-                          setSelectedChapterId(ch.id);
-                        }}
-                        className={cn(
-                          "p-2 rounded-lg text-xs text-left transition-all flex items-center justify-between",
-                          selectedChapterId === ch.id
-                            ? "liquid-pill-active text-white font-semibold"
-                            : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
-                        )}
-                      >
-                        <span className="truncate">{ch.title}</span>
-                        <div className="flex items-center gap-1.5 ml-2 shrink-0">
-                          <span className="text-[10px] font-mono text-slate-400">
-                            {ch.notes.length} notes
-                          </span>
-                          {selectedChapterId === ch.id && (
-                            <span className="material-symbols-outlined text-sky-400 text-[14px]">
-                              arrow_forward
-                            </span>
+                      <div key={ch.id} className="flex items-center gap-1 group/ch">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedSubjectId(sub.id);
+                            setSelectedChapterId(ch.id);
+                          }}
+                          className={cn(
+                            "flex-1 p-2 rounded-lg text-xs text-left transition-all flex items-center justify-between",
+                            selectedChapterId === ch.id
+                              ? "liquid-pill-active text-white font-semibold"
+                              : "text-slate-300 hover:text-white hover:bg-white/[0.04]"
                           )}
-                        </div>
-                      </button>
+                        >
+                          <span className="truncate">{ch.title}</span>
+                          <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                            <span className="text-[10px] font-mono text-slate-400">
+                              {ch.notes.length} notes
+                            </span>
+                            {selectedChapterId === ch.id && (
+                              <span className="material-symbols-outlined text-sky-400 text-[14px]">
+                                arrow_forward
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isDeleting}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteChapter(ch.id, ch.title, ch.notes.length);
+                          }}
+                          className="opacity-40 hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-all shrink-0"
+                          title={`Delete folder "${ch.title}"`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">delete</span>
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -525,6 +691,16 @@ export function AdminNotesManager({ initialTree }: AdminNotesManagerProps) {
                       >
                         {note.allowDownload ? "Downloadable" : "View Only"}
                       </span>
+
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() => handleDeleteNote(note.id, note.title)}
+                        className="p-1 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors disabled:opacity-50"
+                        title={`Delete note "${note.title}"`}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                      </button>
                     </div>
                   </ReadingSurface>
                 ))}

@@ -2,6 +2,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -81,3 +82,29 @@ export async function getPresignedViewUrl(
     expiresIn: expiresInSeconds,
   });
 }
+
+/**
+ * Delete an object from Cloudflare R2 storage.
+ */
+export async function deleteR2Object(objectKey: string): Promise<boolean> {
+  if (
+    accessKeyId === "dummy_access_key" ||
+    (!process.env.R2_ACCOUNT_ID && !process.env.R2_ENDPOINT)
+  ) {
+    return true; // Mock mode
+  }
+
+  try {
+    await r2Client.send(
+      new DeleteObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: objectKey,
+      })
+    );
+    return true;
+  } catch (err) {
+    console.warn("Failed to delete R2 object:", err);
+    return false;
+  }
+}
+
