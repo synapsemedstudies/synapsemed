@@ -63,7 +63,7 @@ export default async function LandingPage() {
         {/* Release Pill */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full liquid-glass-card border border-indigo-400/30 text-indigo-200 text-xs font-['Space_Grotesk'] font-semibold mb-6 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Spring 2026 Medical Cohort System Live</span>
+          <span>Medical Exam &amp; Practice Portal Active</span>
         </div>
 
         {/* Main Headline */}
@@ -76,7 +76,7 @@ export default async function LandingPage() {
 
         <p className="mt-6 text-base sm:text-lg text-slate-300 max-w-2xl leading-relaxed font-normal">
           The unified medical study portal designed for medical students and educators. 
-          Structured past university exam questions with model answers and timed exam simulations with instant grading and zero lag.
+          Structured past university exam questions with model answers, and timed exam simulations with negative marking and instant scoring.
         </p>
 
         {/* Action Buttons */}

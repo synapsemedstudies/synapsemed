@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { GlassCard, ReadingSurface } from "@/components/ui/glass";
-import * as XLSX from "xlsx";
 import {
   validateQuizRows,
   type QuizRow,
@@ -31,6 +30,7 @@ export function AdminQuizUploader() {
 
     try {
       const buffer = await file.arrayBuffer();
+      const XLSX = await import("xlsx");
       const workbook = XLSX.read(buffer, { type: "array" });
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];

@@ -18,7 +18,10 @@ export default async function AdminDashboardPage() {
         .from(users)
         .where(eq(users.role, "student")),
       db.select({ val: count() }).from(pyqQuestions),
-      db.select({ val: count() }).from(quizzes),
+      db
+        .select({ val: count() })
+        .from(quizzes)
+        .where(eq(quizzes.isPublished, true)),
     ]);
     studentCount = sc?.val || 0;
     pyqCount = pc?.val || 0;

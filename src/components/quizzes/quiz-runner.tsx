@@ -23,6 +23,7 @@ export function QuizRunner({ quiz, questions }: QuizRunnerProps) {
   const [answers, setAnswers] = useState<Record<string, "A" | "B" | "C" | "D">>({});
   const [timeLeft, setTimeLeft] = useState(quiz.durationMinutes * 60);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [paletteDrawerOpen, setPaletteDrawerOpen] = useState(false);
 
@@ -54,29 +55,35 @@ export function QuizRunner({ quiz, questions }: QuizRunnerProps) {
     }
   }, [answers, timeLeft, storageKey]);
 
-  // Submit attempt callback
+  // Submit attempt callback with safe local-storage preservation on failure
   const handleFinalSubmit = useCallback(async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setSubmitError(null);
 
     const timeTaken = quiz.durationMinutes * 60 - timeLeft;
 
-    const res = await submitQuizAttempt({
-      quizId: quiz.id,
-      timeTakenSeconds: Math.max(1, timeTaken),
-      answers,
-    });
-
     try {
-      localStorage.removeItem(storageKey);
-    } catch {
-      // ignore
-    }
+      const res = await submitQuizAttempt({
+        quizId: quiz.id,
+        timeTakenSeconds: Math.max(1, timeTaken),
+        answers,
+      });
 
-    if (res.success) {
-      router.push(`/dashboard/quizzes/${quiz.id}/result`);
-    } else {
-      alert(res.error || "Failed to submit quiz");
+      if (res.success) {
+        try {
+          localStorage.removeItem(storageKey);
+        } catch {
+          // ignore
+        }
+        router.push(`/dashboard/quizzes/${quiz.id}/result`);
+      } else {
+        setSubmitError(res.error || "Submission failed. Your answers are preserved; please retry.");
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Network error. Your answers are preserved; please retry.";
+      setSubmitError(msg);
       setIsSubmitting(false);
     }
   }, [isSubmitting, quiz.durationMinutes, quiz.id, timeLeft, answers, storageKey, router]);
@@ -143,6 +150,10 @@ export function QuizRunner({ quiz, questions }: QuizRunnerProps) {
           <span className="hidden sm:inline text-xs text-slate-400 font-mono">
             ({answeredCount}/{questions.length} answered)
           </span>
+          <span className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 text-[10px] text-emerald-300 font-mono border border-emerald-500/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span>Saved on this device</span>
+          </span>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
@@ -179,6 +190,24 @@ export function QuizRunner({ quiz, questions }: QuizRunnerProps) {
           </button>
         </div>
       </div>
+
+      {/* Submission Error Banner with Retry Action */}
+      {submitError && (
+        <div className="p-4 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-200 text-xs flex items-center justify-between gap-3 shadow-lg animate-in fade-in-50">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-rose-400 text-[20px]">warning</span>
+            <span>{submitError}</span>
+          </div>
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={handleFinalSubmit}
+            className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-['Space_Grotesk'] font-bold text-xs uppercase tracking-wider shrink-0 transition-colors"
+          >
+            {isSubmitting ? "Retrying..." : "Retry Submission"}
+          </button>
+        </div>
+      )}
 
       {/* Main 2-Column Quiz Runner Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -415,7 +444,12 @@ export function QuizRunner({ quiz, questions }: QuizRunnerProps) {
 
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
               You have answered <strong className="text-white">{answeredCount}</strong> of{" "}
-              <strong className="text-white">{questions.length}</strong> questions. Unanswered questions will receive 0 marks.
+              <strong className="text-white">{questions.length}</strong> questions.
+              {questions.length - answeredCount > 0 && (
+                <span className="block mt-2 text-amber-300 font-medium">
+                  {questions.length - answeredCount} unanswered question{questions.length - answeredCount > 1 ? "s" : ""} will receive 0 marks.
+                </span>
+              )}
             </p>
 
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.08]">
@@ -424,7 +458,7 @@ export function QuizRunner({ quiz, questions }: QuizRunnerProps) {
                 onClick={() => setShowConfirmModal(false)}
                 className="px-4 py-2 rounded-xl liquid-glass-subtle text-slate-300 text-xs font-semibold hover:text-white"
               >
-                Continue Test
+                Continue Quiz
               </button>
               <button
                 type="button"
@@ -435,7 +469,7 @@ export function QuizRunner({ quiz, questions }: QuizRunnerProps) {
                 }}
                 className="px-5 py-2 rounded-xl liquid-btn-primary text-white text-xs font-['Space_Grotesk'] font-bold uppercase tracking-wider"
               >
-                {isSubmitting ? "Grading..." : "Confirm & Submit"}
+                {isSubmitting ? "Submitting..." : "Submit Exam"}
               </button>
             </div>
           </GlassCard>

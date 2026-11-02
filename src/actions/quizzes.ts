@@ -6,7 +6,7 @@ import { quizzes, quizQuestions, type Quiz, type QuizQuestion } from "@/db/schem
 import { QuizRowSchema, type QuizRow, ManualQuizSchema, type ManualQuiz } from "@/lib/validators/quiz";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 
 export interface CreateQuizInput {
   title: string;
@@ -172,14 +172,20 @@ export async function getAdminQuizzes(): Promise<
   await requireAdmin();
 
   try {
-    const [allQuizzes, allQuestions] = await Promise.all([
+    const [allQuizzes, questionCounts] = await Promise.all([
       db.select().from(quizzes).orderBy(desc(quizzes.createdAt)),
-      db.select({ quizId: quizQuestions.quizId }).from(quizQuestions),
+      db
+        .select({
+          quizId: quizQuestions.quizId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(quizQuestions)
+        .groupBy(quizQuestions.quizId),
     ]);
 
     const counts = new Map<string, number>();
-    for (const q of allQuestions) {
-      counts.set(q.quizId, (counts.get(q.quizId) || 0) + 1);
+    for (const q of questionCounts) {
+      counts.set(q.quizId, q.count);
     }
 
     return allQuizzes.map((q) => ({

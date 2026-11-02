@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { GlassCard, ReadingSurface } from "@/components/ui/glass";
 import { FormattedContent } from "@/components/ui/formatted-content";
 import type { SubjectWithPYQChapters } from "@/actions/pyq";
@@ -10,11 +10,13 @@ import type { PYQQuestion } from "@/db/schema";
 interface StudentPYQBrowserProps {
   syllabus: SubjectWithPYQChapters[];
   initialChapterId?: string;
+  initialQuestions?: PYQQuestion[];
 }
 
 export function StudentPYQBrowser({
   syllabus,
   initialChapterId,
+  initialQuestions = [],
 }: StudentPYQBrowserProps) {
   // Find initial subject & chapter
   const defaultSubject = syllabus[0];
@@ -34,29 +36,43 @@ export function StudentPYQBrowser({
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
-  // Questions state
-  const [questions, setQuestions] = useState<PYQQuestion[]>([]);
+  // Questions state - hydrated immediately with server-rendered questions
+  const [questions, setQuestions] = useState<PYQQuestion[]>(initialQuestions);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Expanded question IDs
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  // Expanded question IDs - default first question expanded for immediate readability
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(
+    () => new Set(initialQuestions.length > 0 ? [initialQuestions[0].id] : [])
+  );
+  const initialRenderRef = useRef(true);
 
   // Active Subject & Chapter
   const activeSubject = syllabus.find((s) => s.id === selectedSubjectId);
   const activeChapter = activeSubject?.chapters.find((c) => c.id === selectedChapterId);
 
-  // Load questions for the selected chapter
+  // Load questions when selected chapter changes (skips initial render if SSR provided)
   useEffect(() => {
     if (!selectedChapterId) return;
 
+    if (
+      initialRenderRef.current &&
+      initialQuestions.length > 0 &&
+      selectedChapterId === (defaultChapter?.id || "")
+    ) {
+      initialRenderRef.current = false;
+      return;
+    }
+    initialRenderRef.current = false;
+
     let isMounted = true;
     setLoading(true);
+    setFetchError(null);
 
     getChapterPYQs(selectedChapterId)
       .then((data) => {
         if (isMounted) {
           setQuestions(data);
-          // By default expand the first question so student immediately sees format
           if (data.length > 0) {
             setExpandedIds(new Set([data[0].id]));
           } else {
@@ -64,15 +80,20 @@ export function StudentPYQBrowser({
           }
         }
       })
-      .catch((err) => console.error("Failed to load questions:", err))
+      .catch((err) => {
+        console.error("Failed to load questions:", err);
+        if (isMounted) {
+          setFetchError("Unable to load questions for this chapter. Please retry.");
+        }
+      })
       .finally(() => {
         if (isMounted) setLoading(false);
       });
 
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedChapterId]);
+  return () => {
+    isMounted = false;
+  };
+}, [selectedChapterId, defaultChapter?.id, initialQuestions.length]);
 
   // Toggle expand/collapse
   const toggleExpand = (id: string) => {
@@ -325,8 +346,30 @@ export function StudentPYQBrowser({
             </div>
           )}
 
+          {/* Error Recovery State */}
+          {fetchError && !loading && (
+            <GlassCard className="p-8 flex flex-col items-center justify-center text-center gap-3">
+              <span className="material-symbols-outlined text-rose-400 text-[32px]">error</span>
+              <p className="text-sm font-semibold text-white">{fetchError}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoading(true);
+                  setFetchError(null);
+                  getChapterPYQs(selectedChapterId)
+                    .then((data) => setQuestions(data))
+                    .catch(() => setFetchError("Unable to load questions for this chapter. Please retry."))
+                    .finally(() => setLoading(false));
+                }}
+                className="px-4 py-2 rounded-xl liquid-btn-primary text-white text-xs font-semibold"
+              >
+                Retry Loading Chapter
+              </button>
+            </GlassCard>
+          )}
+
           {/* Empty State */}
-          {!loading && filteredQuestions.length === 0 && (
+          {!loading && !fetchError && filteredQuestions.length === 0 && (
             <GlassCard className="p-10 flex flex-col items-center justify-center text-center gap-2">
               <span className="material-symbols-outlined text-slate-500 text-[36px]">
                 quiz
@@ -350,10 +393,14 @@ export function StudentPYQBrowser({
                   key={q.id}
                   className="rounded-2xl border border-white/10 bg-[#0e1222]/90 shadow-[0_4px_24px_rgba(0,0,0,0.3)] overflow-hidden transition-all duration-200"
                 >
-                  {/* Card Header & Question Stem */}
-                  <div
+                  {/* Card Header & Question Stem (Accessible semantic button) */}
+                  <button
+                    type="button"
+                    id={`question-header-${q.id}`}
+                    aria-expanded={isExpanded}
+                    aria-controls={`answer-${q.id}`}
                     onClick={() => toggleExpand(q.id)}
-                    className="p-5 cursor-pointer hover:bg-white/[0.02] transition-colors flex flex-col gap-3 select-none"
+                    className="w-full text-left p-5 hover:bg-white/[0.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/50 transition-colors flex flex-col gap-3 select-none"
                   >
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -385,7 +432,7 @@ export function StudentPYQBrowser({
                             <span className="material-symbols-outlined text-[13px] text-sky-400">
                               history
                             </span>
-                            <span>Exam: {q.repeatYears}</span>
+                            <span>Repeated in: {q.repeatYears}</span>
                           </span>
                         )}
                       </div>
@@ -403,17 +450,22 @@ export function StudentPYQBrowser({
                     <div className="text-sm sm:text-base font-semibold text-white leading-relaxed">
                       <FormattedContent content={q.questionText} />
                     </div>
-                  </div>
+                  </button>
 
                   {/* Expandable Model Answer Body (WCAG 4.5:1 High Contrast Reading Surface) */}
                   {isExpanded && (
-                    <div className="border-t border-white/10 bg-[#070913] p-5 sm:p-6 flex flex-col gap-4 animate-in fade-in-50 duration-200">
+                    <div
+                      id={`answer-${q.id}`}
+                      role="region"
+                      aria-labelledby={`question-header-${q.id}`}
+                      className="border-t border-white/10 bg-[#070913] p-5 sm:p-6 flex flex-col gap-4 animate-in fade-in-50 duration-200"
+                    >
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-['Space_Grotesk'] font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
                           <span className="material-symbols-outlined text-[16px]">
                             verified
                           </span>
-                          <span>University Model Answer &bull; Structured Framework</span>
+                          <span>Model Answer &bull; Structured Framework</span>
                         </span>
                       </div>
 

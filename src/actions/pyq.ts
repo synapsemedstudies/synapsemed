@@ -10,7 +10,7 @@ import {
   type Chapter,
   type PYQQuestion,
 } from "@/db/schema";
-import { eq, asc, desc } from "drizzle-orm";
+import { eq, asc, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export interface ChapterWithPYQCount extends Chapter {
@@ -332,20 +332,26 @@ An oblique intermuscular canal in the lower part of anterior abdominal wall, ~4 
  */
 export async function getPYQSyllabusTree(): Promise<SubjectWithPYQChapters[]> {
   try {
-    const [rawSubjects, rawChapters, rawQuestions] = await Promise.all([
+    const [rawSubjects, rawChapters, questionCounts] = await Promise.all([
       db.select().from(subjects).orderBy(asc(subjects.orderIndex)),
       db.select().from(chapters).orderBy(asc(chapters.orderIndex)),
-      db.select().from(pyqQuestions),
+      db
+        .select({
+          chapterId: pyqQuestions.chapterId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(pyqQuestions)
+        .groupBy(pyqQuestions.chapterId),
     ]);
 
     if (rawSubjects.length === 0) {
       return FALLBACK_SYLLABUS;
     }
 
-    // Count questions per chapter
+    // Count questions per chapter from SQL aggregate
     const countMap = new Map<string, number>();
-    for (const q of rawQuestions) {
-      countMap.set(q.chapterId, (countMap.get(q.chapterId) || 0) + 1);
+    for (const q of questionCounts) {
+      countMap.set(q.chapterId, q.count);
     }
 
     // Map chapters to subjects
@@ -537,19 +543,23 @@ export async function importPYQsBulk(
 
   try {
     let count = 0;
+    const CHUNK_SIZE = 100;
     await db.transaction(async (tx) => {
-      for (const item of items) {
-        await tx.insert(pyqQuestions).values({
-          subjectId: item.subjectId,
-          chapterId: item.chapterId,
-          questionType: item.questionType,
-          questionText: item.questionText.trim(),
-          marks: item.marks || 5,
-          repeatYears: item.repeatYears?.trim() || "",
-          examName: item.examName?.trim() || "University Exam",
-          modelAnswer: item.modelAnswer.trim(),
-        });
-        count++;
+      for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+        const chunk = items.slice(i, i + CHUNK_SIZE);
+        await tx.insert(pyqQuestions).values(
+          chunk.map((item) => ({
+            subjectId: item.subjectId,
+            chapterId: item.chapterId,
+            questionType: item.questionType,
+            questionText: item.questionText.trim(),
+            marks: item.marks || 5,
+            repeatYears: item.repeatYears?.trim() || "",
+            examName: item.examName?.trim() || "University Exam",
+            modelAnswer: item.modelAnswer.trim(),
+          }))
+        );
+        count += chunk.length;
       }
     });
 

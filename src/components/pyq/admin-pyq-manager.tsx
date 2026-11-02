@@ -13,7 +13,6 @@ import {
   importPYQsBulk,
 } from "@/actions/pyq";
 import type { PYQQuestion } from "@/db/schema";
-import * as XLSX from "xlsx";
 
 interface AdminPYQManagerProps {
   initialTree: SubjectWithPYQChapters[];
@@ -213,8 +212,9 @@ export function AdminPYQManager({ initialTree }: AdminPYQManagerProps) {
     setParseErrors([]);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const XLSX = await import("xlsx");
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];

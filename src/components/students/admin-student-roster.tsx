@@ -4,7 +4,6 @@ import React, { useState, useMemo } from "react";
 import { GlassCard, ReadingSurface } from "@/components/ui/glass";
 import type { StudentRosterItem, NewStudentRow } from "@/actions/students";
 import { importStudentRoster } from "@/actions/students";
-import * as XLSX from "xlsx";
 import { cn } from "@/lib/utils";
 
 interface AdminStudentRosterProps {
@@ -31,8 +30,9 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
     );
   }, [roster, searchQuery]);
 
-  // Export Gradebook via SheetJS
-  const handleExportGradebook = () => {
+  // Export Gradebook via SheetJS (dynamically imported)
+  const handleExportGradebook = async () => {
+    const XLSX = await import("xlsx");
     const data = roster.map((s) => ({
       Roll_Number: s.rollNumber || "N/A",
       Full_Name: s.fullName,
@@ -47,8 +47,9 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
     XLSX.writeFile(wb, "SynapseMed_Cohort_Gradebook.xlsx");
   };
 
-  // Download Sample Roster Template via SheetJS
-  const handleDownloadRosterTemplate = () => {
+  // Download Sample Roster Template via SheetJS (dynamically imported)
+  const handleDownloadRosterTemplate = async () => {
+    const XLSX = await import("xlsx");
     const templateData = [
       {
         full_name: "Student Name A",
@@ -68,10 +69,11 @@ export function AdminStudentRoster({ initialRoster }: AdminStudentRosterProps) {
     XLSX.writeFile(wb, "sample_student_roster_template.xlsx");
   };
 
-  // Handle Excel File Drop for Bulk Import
+  // Handle Excel File Drop for Bulk Import (dynamically imported)
   const handleFileDrop = async (file: File) => {
     try {
       const buffer = await file.arrayBuffer();
+      const XLSX = await import("xlsx");
       const wb = XLSX.read(buffer, { type: "array" });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });

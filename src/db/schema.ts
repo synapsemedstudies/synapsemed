@@ -156,6 +156,7 @@ export const quizAttempts = pgTable(
   },
   (table) => ({
     quizStudentIdx: uniqueIndex("quiz_attempts_quiz_student_idx").on(table.quizId, table.studentId),
+    studentIdx: index("quiz_attempts_student_idx").on(table.studentId),
   })
 );
 

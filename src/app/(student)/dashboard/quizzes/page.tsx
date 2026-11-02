@@ -4,7 +4,7 @@ import { GlassCard } from "@/components/ui/glass";
 import { requireStudent } from "@/lib/auth";
 import { db } from "@/db";
 import { quizzes, quizQuestions, quizAttempts } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray, and, sql } from "drizzle-orm";
 
 interface QuizCardData {
   id: string;
@@ -20,29 +20,51 @@ interface QuizCardData {
 
 async function getStudentQuizzes(studentId: string): Promise<QuizCardData[]> {
   try {
-    const [rawQuizzes, allQuestions, studentAttempts] = await Promise.all([
-      db
-        .select()
-        .from(quizzes)
-        .where(eq(quizzes.isPublished, true))
-        .orderBy(desc(quizzes.createdAt)),
-      db
-        .select({ id: quizQuestions.id, quizId: quizQuestions.quizId })
-        .from(quizQuestions),
-      db
-        .select()
-        .from(quizAttempts)
-        .where(eq(quizAttempts.studentId, studentId)),
-    ]);
+    const rawQuizzes = await db
+      .select()
+      .from(quizzes)
+      .where(eq(quizzes.isPublished, true))
+      .orderBy(desc(quizzes.createdAt));
 
-    // Group question count by quizId in-memory (0ms)
-    const questionCountByQuiz = new Map<string, number>();
-    for (const q of allQuestions) {
-      questionCountByQuiz.set(q.quizId, (questionCountByQuiz.get(q.quizId) || 0) + 1);
+    if (rawQuizzes.length === 0) {
+      return [];
     }
 
-    // Map student attempt by quizId in-memory (0ms)
-    const attemptByQuiz = new Map<string, typeof studentAttempts[0]>();
+    const quizIds = rawQuizzes.map((q) => q.id);
+
+    const [questionCounts, studentAttempts] = await Promise.all([
+      db
+        .select({
+          quizId: quizQuestions.quizId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(quizQuestions)
+        .where(inArray(quizQuestions.quizId, quizIds))
+        .groupBy(quizQuestions.quizId),
+      db
+        .select({
+          quizId: quizAttempts.quizId,
+          score: quizAttempts.score,
+          totalMarks: quizAttempts.totalMarks,
+          timeTakenSeconds: quizAttempts.timeTakenSeconds,
+        })
+        .from(quizAttempts)
+        .where(
+          and(
+            eq(quizAttempts.studentId, studentId),
+            inArray(quizAttempts.quizId, quizIds)
+          )
+        ),
+    ]);
+
+    // Group question count by quizId from SQL aggregate
+    const questionCountByQuiz = new Map<string, number>();
+    for (const q of questionCounts) {
+      questionCountByQuiz.set(q.quizId, q.count);
+    }
+
+    // Map student attempt by quizId
+    const attemptByQuiz = new Map<string, (typeof studentAttempts)[0]>();
     for (const att of studentAttempts) {
       if (!attemptByQuiz.has(att.quizId)) {
         attemptByQuiz.set(att.quizId, att);
