@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { GlassCard, ReadingSurface } from "@/components/ui/glass";
+import { FormattedContent } from "@/components/ui/formatted-content";
 import type { SubjectWithPYQChapters, CreatePYQInput } from "@/actions/pyq";
 import {
   createSubject,
@@ -722,8 +723,9 @@ export function AdminPYQManager({ initialTree }: AdminPYQManagerProps) {
                         {q.marks} Marks
                       </span>
                       {q.repeatYears && (
-                        <span className="text-[10px] text-amber-300 font-mono">
-                          🔥 Asked in: {q.repeatYears}
+                        <span className="inline-flex items-center gap-1 text-[10px] text-sky-300 font-['Space_Grotesk']">
+                          <span className="material-symbols-outlined text-[12px] text-sky-400">history</span>
+                          <span>Exam: {q.repeatYears}</span>
                         </span>
                       )}
                     </div>
@@ -738,14 +740,16 @@ export function AdminPYQManager({ initialTree }: AdminPYQManagerProps) {
                     </button>
                   </div>
 
-                  <p className="text-xs font-semibold text-white leading-relaxed">{q.questionText}</p>
+                  <div className="text-xs font-semibold text-white leading-relaxed">
+                    <FormattedContent content={q.questionText} />
+                  </div>
 
                   <details className="mt-1 group">
                     <summary className="text-[11px] font-semibold text-indigo-400 cursor-pointer select-none hover:underline inline-flex items-center gap-1">
                       <span>View Model Answer</span>
                     </summary>
-                    <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs text-slate-300 leading-relaxed whitespace-pre-wrap font-sans bg-black/20 p-3 rounded-lg">
-                      {q.modelAnswer}
+                    <div className="mt-2.5 pt-2.5 border-t border-white/10 text-xs bg-black/20 p-3 rounded-lg">
+                      <FormattedContent content={q.modelAnswer} />
                     </div>
                   </details>
                 </ReadingSurface>

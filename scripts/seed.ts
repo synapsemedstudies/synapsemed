@@ -32,7 +32,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 const sql = postgres(databaseUrl, { max: 1 });
 
 async function seed() {
-  console.log("🌱 Starting Database Seeding on:", supabaseUrl);
+  console.log("Starting Database Seeding on:", supabaseUrl);
 
   // 1. Seed Faculty Admin
   const adminEmail = "admin@synapsemed.edu";
@@ -201,18 +201,18 @@ async function seed() {
   console.log("  ↳ Created 5 detailed university PYQ questions with model answers.");
 
   console.log("\n==================================================");
-  console.log("✅ SEEDING COMPLETE!");
+  console.log("SEEDING COMPLETE!");
   console.log("==================================================");
-  console.log("\n👑 Admin Account:");
+  console.log("\n[Admin Account]");
   console.log(`   Email:    ${adminEmail}`);
   console.log(`   Password: ${adminPassword}`);
   console.log(`   Role:     admin (Redirects to /admin)`);
-  console.log("\n🎓 Student Account:");
+  console.log("\n[Student Account]");
   console.log(`   Email:    ${studentEmail}`);
   console.log(`   Password: ${studentPassword}`);
   console.log(`   Roll:     MBBS-2024-042 (Redirects to /dashboard)`);
-  console.log("\n⚡ Local Dev Demo Buttons:");
-  console.log("   You can also click 'Admin View' or 'Student View' directly on /login without typing passwords!");
+  console.log("\n[Local Development Demo Buttons]");
+  console.log("   Click 'Admin View' or 'Student View' directly on /login without typing passwords.");
   console.log("==================================================\n");
 
   await sql.end();

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { GlassCard, ReadingSurface } from "@/components/ui/glass";
+import { FormattedContent } from "@/components/ui/formatted-content";
 import type { SubjectWithPYQChapters } from "@/actions/pyq";
 import { getChapterPYQs } from "@/actions/pyq";
 import type { PYQQuestion } from "@/db/schema";
@@ -380,8 +381,11 @@ export function StudentPYQBrowser({
 
                         {/* Repeat Years / Exam Tag */}
                         {q.repeatYears && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                            <span>🔥 Asked in: {q.repeatYears}</span>
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-['Space_Grotesk'] text-sky-300 bg-sky-500/10 px-2.5 py-0.5 rounded-full border border-sky-500/20">
+                            <span className="material-symbols-outlined text-[13px] text-sky-400">
+                              history
+                            </span>
+                            <span>Exam: {q.repeatYears}</span>
                           </span>
                         )}
                       </div>
@@ -395,10 +399,10 @@ export function StudentPYQBrowser({
                       </div>
                     </div>
 
-                    {/* Question Text */}
-                    <h3 className="text-sm sm:text-base font-semibold text-white leading-relaxed">
-                      {q.questionText}
-                    </h3>
+                    {/* Question Text with formatted markdown */}
+                    <div className="text-sm sm:text-base font-semibold text-white leading-relaxed">
+                      <FormattedContent content={q.questionText} />
+                    </div>
                   </div>
 
                   {/* Expandable Model Answer Body (WCAG 4.5:1 High Contrast Reading Surface) */}
@@ -414,8 +418,8 @@ export function StudentPYQBrowser({
                       </div>
 
                       {/* Formatted Model Answer Content */}
-                      <ReadingSurface className="p-5 text-xs sm:text-sm text-slate-200 leading-relaxed font-sans whitespace-pre-wrap bg-slate-950/80 border-slate-800">
-                        {q.modelAnswer}
+                      <ReadingSurface className="p-5 sm:p-6 text-xs sm:text-sm bg-slate-950/80 border-slate-800">
+                        <FormattedContent content={q.modelAnswer} />
                       </ReadingSurface>
                     </div>
                   )}
