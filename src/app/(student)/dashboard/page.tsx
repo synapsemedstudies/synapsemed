@@ -3,24 +3,24 @@ import Link from "next/link";
 import { GlassCard } from "@/components/ui/glass";
 import { requireStudent } from "@/lib/auth";
 import { db } from "@/db";
-import { notes, quizzes } from "@/db/schema";
+import { pyqQuestions, quizzes } from "@/db/schema";
 import { count, eq } from "drizzle-orm";
 
 export default async function StudentDashboardPage() {
   const student = await requireStudent();
 
-  let notesCount = 0;
+  let pyqCount = 0;
   let quizCount = 0;
 
   try {
-    const [[nc], [qc]] = await Promise.all([
-      db.select({ val: count() }).from(notes),
+    const [[pc], [qc]] = await Promise.all([
+      db.select({ val: count() }).from(pyqQuestions),
       db
         .select({ val: count() })
         .from(quizzes)
         .where(eq(quizzes.isPublished, true)),
     ]);
-    notesCount = nc?.val || 0;
+    pyqCount = pc?.val || 0;
     quizCount = qc?.val || 0;
   } catch (err) {
     console.error("Error fetching student metrics:", err);
@@ -40,47 +40,47 @@ export default async function StudentDashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
-            href="/dashboard/quizzes"
+            href="/dashboard/pyq"
             className="px-4 py-2.5 rounded-xl liquid-btn-primary text-white text-xs font-['Space_Grotesk'] font-semibold hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-[0_4px_16px_rgba(99,102,241,0.35)]"
+          >
+            <span className="material-symbols-outlined text-[18px]">history_edu</span>
+            <span>Browse PYQ Bank</span>
+          </Link>
+          <Link
+            href="/dashboard/quizzes"
+            className="px-4 py-2.5 rounded-xl liquid-glass-card hover:border-white/20 text-white text-xs font-['Space_Grotesk'] font-semibold active:scale-95 transition-all flex items-center gap-2"
           >
             <span className="material-symbols-outlined text-[18px]">timer</span>
             <span>Take a Quiz</span>
-          </Link>
-          <Link
-            href="/dashboard/notes"
-            className="px-4 py-2.5 rounded-xl liquid-glass-card hover:border-white/20 text-white text-xs font-['Space_Grotesk'] font-semibold active:scale-95 transition-all flex items-center gap-2"
-          >
-            <span className="material-symbols-outlined text-[18px]">menu_book</span>
-            <span>Browse Notes</span>
           </Link>
         </div>
       </div>
 
       {/* Core Academic Modules */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Hub 1: Notes Library */}
+        {/* Hub 1: Medical College PYQ Bank */}
         <GlassCard className="p-6 sm:p-8 flex flex-col justify-between hover:border-white/20 transition-all duration-300 group">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.3)]">
-                <span className="material-symbols-outlined text-[26px]">library_books</span>
+                <span className="material-symbols-outlined text-[26px]">history_edu</span>
               </div>
               <span className="px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-['Space_Grotesk'] font-bold">
-                {notesCount} Notes
+                {pyqCount > 0 ? `${pyqCount} Questions` : "PYQ Bank"}
               </span>
             </div>
             <h3 className="font-['Space_Grotesk'] text-xl font-bold text-white mb-2 group-hover:text-indigo-200 transition-colors">
-              Medical Notes Library
+              Medical College PYQ Bank
             </h3>
             <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Access clinical summaries, high-yield subject outlines, and study notes organized by chapter.
+              Access past university exam questions (Long Essays, Short Notes, and Clinical Cases) with structured model answers organized by subject and chapter.
             </p>
           </div>
           <Link
-            href="/dashboard/notes"
+            href="/dashboard/pyq"
             className="mt-6 w-full py-2.5 rounded-xl liquid-btn-primary text-white text-xs font-['Space_Grotesk'] font-semibold flex items-center justify-center gap-1.5 transition-all shadow-[0_4px_16px_rgba(99,102,241,0.3)]"
           >
-            <span>Open Notes Library</span>
+            <span>Open PYQ Bank</span>
             <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
           </Link>
         </GlassCard>

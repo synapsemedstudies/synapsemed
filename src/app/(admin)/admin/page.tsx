@@ -2,26 +2,26 @@ import React from "react";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/glass";
 import { db } from "@/db";
-import { users, notes, quizzes } from "@/db/schema";
+import { users, pyqQuestions, quizzes } from "@/db/schema";
 import { count, eq } from "drizzle-orm";
 
 export default async function AdminDashboardPage() {
   // Fetch real database metrics
   let studentCount = 0;
-  let notesCount = 0;
+  let pyqCount = 0;
   let quizCount = 0;
 
   try {
-    const [[sc], [nc], [qc]] = await Promise.all([
+    const [[sc], [pc], [qc]] = await Promise.all([
       db
         .select({ val: count() })
         .from(users)
         .where(eq(users.role, "student")),
-      db.select({ val: count() }).from(notes),
+      db.select({ val: count() }).from(pyqQuestions),
       db.select({ val: count() }).from(quizzes),
     ]);
     studentCount = sc?.val || 0;
-    notesCount = nc?.val || 0;
+    pyqCount = pc?.val || 0;
     quizCount = qc?.val || 0;
   } catch (err) {
     console.error("Error fetching admin metrics:", err);
@@ -36,23 +36,23 @@ export default async function AdminDashboardPage() {
             Faculty Admin Console
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Manage medical notes, ingest Excel quizzes, and monitor enrolled students.
+            Manage medical university PYQs, ingest Excel questions &amp; quizzes, and monitor enrolled students.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/quizzes/new"
+            href="/admin/pyq"
             className="px-4 py-2.5 rounded-xl liquid-btn-primary text-white text-xs font-['Space_Grotesk'] font-semibold hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-[0_4px_16px_rgba(99,102,241,0.35)]"
           >
-            <span className="material-symbols-outlined text-[18px]">assignment</span>
-            <span>Create / Import Quiz</span>
+            <span className="material-symbols-outlined text-[18px]">history_edu</span>
+            <span>Manage PYQs</span>
           </Link>
           <Link
-            href="/admin/notes"
+            href="/admin/quizzes/new"
             className="px-4 py-2.5 rounded-xl liquid-glass-card hover:border-white/20 text-white text-xs font-['Space_Grotesk'] font-semibold active:scale-95 transition-all flex items-center gap-2"
           >
-            <span className="material-symbols-outlined text-[18px]">post_add</span>
-            <span>Upload Notes</span>
+            <span className="material-symbols-outlined text-[18px]">assignment</span>
+            <span>Create Quiz</span>
           </Link>
         </div>
       </div>
@@ -85,21 +85,21 @@ export default async function AdminDashboardPage() {
         <GlassCard className="p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs font-['Space_Grotesk'] font-semibold uppercase tracking-wider">
-              Notes in Library
+              Past Exam Questions
             </span>
             <span className="material-symbols-outlined text-sky-400 text-[22px]">
-              library_books
+              history_edu
             </span>
           </div>
           <div>
             <div className="font-['Space_Grotesk'] text-3xl font-bold text-white">
-              {notesCount}
+              {pyqCount}
             </div>
             <Link
-              href="/admin/notes"
+              href="/admin/pyq"
               className="text-[11px] text-sky-300 hover:text-white mt-2 inline-flex items-center gap-1 font-medium transition-colors"
             >
-              <span>Open Notes Manager</span>
+              <span>Open PYQ Manager</span>
               <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
             </Link>
           </div>
@@ -142,20 +142,20 @@ export default async function AdminDashboardPage() {
               <div className="p-4 rounded-xl liquid-glass-subtle flex flex-col justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 text-indigo-300 mb-1.5">
-                    <span className="material-symbols-outlined text-[20px]">description</span>
+                    <span className="material-symbols-outlined text-[20px]">history_edu</span>
                     <span className="font-['Space_Grotesk'] font-semibold text-sm">
-                      Syllabus &amp; Notes
+                      Medical College PYQ Bank
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Upload medical lecture notes and PDFs organized by Subject and Chapter with private presigned download URLs.
+                    Create and manage past university questions (Long Essays, Short Notes, Cases) with structured model answers.
                   </p>
                 </div>
                 <Link
-                  href="/admin/notes"
+                  href="/admin/pyq"
                   className="text-xs font-['Space_Grotesk'] font-semibold text-indigo-300 hover:text-white flex items-center gap-1 self-start transition-colors"
                 >
-                  <span>Upload &amp; Manage Notes</span>
+                  <span>Open PYQ Manager</span>
                   <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                 </Link>
               </div>

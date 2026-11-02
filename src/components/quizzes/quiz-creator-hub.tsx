@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { InteractiveQuizBuilder } from "@/components/quizzes/interactive-quiz-builder";
 import { AdminQuizUploader } from "@/components/quizzes/admin-quiz-uploader";
-import type { SubjectWithChapters } from "@/actions/notes";
+import type { SubjectWithChapters } from "@/actions/pyq";
 import { cn } from "@/lib/utils";
 
 interface QuizCreatorHubProps {

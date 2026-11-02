@@ -5,7 +5,7 @@ import { GlassCard, ReadingSurface } from "@/components/ui/glass";
 import { createInteractiveQuiz } from "@/actions/quizzes";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import type { SubjectWithChapters } from "@/actions/notes";
+import type { SubjectWithChapters } from "@/actions/pyq";
 
 export interface QuestionDraft {
   id: string;

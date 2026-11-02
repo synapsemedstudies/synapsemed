@@ -8,7 +8,7 @@ import type { AuthenticatedUser } from "@/lib/auth";
 
 const STUDENT_NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
-  { label: "Notes", href: "/dashboard/notes", icon: "menu_book" },
+  { label: "PYQ Bank", href: "/dashboard/pyq", icon: "history_edu" },
   { label: "Quizzes", href: "/dashboard/quizzes", icon: "timer" },
 ];
 

@@ -67,22 +67,30 @@ export const chapters = pgTable(
   })
 );
 
-// 4. Notes Table
-export const notes = pgTable(
-  "notes",
+// 4. PYQ Questions Table (Medical College Previous Year Questions & Model Answers)
+export const pyqQuestionTypeEnum = pgEnum("pyq_question_type", ["laq", "saq", "case"]);
+
+export const pyqQuestions = pgTable(
+  "pyq_questions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    subjectId: uuid("subject_id")
+      .notNull()
+      .references(() => subjects.id, { onDelete: "cascade" }),
     chapterId: uuid("chapter_id")
       .notNull()
       .references(() => chapters.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
-    r2ObjectKey: text("r2_object_key").notNull(),
-    fileSizeBytes: integer("file_size_bytes").notNull().default(0),
-    allowDownload: boolean("allow_download").notNull().default(false),
+    questionType: pyqQuestionTypeEnum("question_type").notNull().default("saq"),
+    questionText: text("question_text").notNull(),
+    marks: integer("marks").notNull().default(5),
+    repeatYears: text("repeat_years").notNull().default(""), // e.g. "2024, 2022, 2019"
+    examName: text("exam_name").default("University Exam"),
+    modelAnswer: text("model_answer").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
-    chapterIdx: index("notes_chapter_idx").on(table.chapterId),
+    chapterTypeIdx: index("pyq_questions_chapter_type_idx").on(table.chapterId, table.questionType),
+    subjectIdx: index("pyq_questions_subject_idx").on(table.subjectId),
   })
 );
 
@@ -159,6 +167,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const subjectsRelations = relations(subjects, ({ many }) => ({
   chapters: many(chapters),
   quizzes: many(quizzes),
+  pyqQuestions: many(pyqQuestions),
 }));
 
 export const chaptersRelations = relations(chapters, ({ one, many }) => ({
@@ -166,13 +175,17 @@ export const chaptersRelations = relations(chapters, ({ one, many }) => ({
     fields: [chapters.subjectId],
     references: [subjects.id],
   }),
-  notes: many(notes),
   quizzes: many(quizzes),
+  pyqQuestions: many(pyqQuestions),
 }));
 
-export const notesRelations = relations(notes, ({ one }) => ({
+export const pyqQuestionsRelations = relations(pyqQuestions, ({ one }) => ({
+  subject: one(subjects, {
+    fields: [pyqQuestions.subjectId],
+    references: [subjects.id],
+  }),
   chapter: one(chapters, {
-    fields: [notes.chapterId],
+    fields: [pyqQuestions.chapterId],
     references: [chapters.id],
   }),
 }));
@@ -215,8 +228,8 @@ export type Subject = typeof subjects.$inferSelect;
 export type NewSubject = typeof subjects.$inferInsert;
 export type Chapter = typeof chapters.$inferSelect;
 export type NewChapter = typeof chapters.$inferInsert;
-export type Note = typeof notes.$inferSelect;
-export type NewNote = typeof notes.$inferInsert;
+export type PYQQuestion = typeof pyqQuestions.$inferSelect;
+export type NewPYQQuestion = typeof pyqQuestions.$inferInsert;
 export type Quiz = typeof quizzes.$inferSelect;
 export type NewQuiz = typeof quizzes.$inferInsert;
 export type QuizQuestion = typeof quizQuestions.$inferSelect;

@@ -76,7 +76,7 @@ export default async function LandingPage() {
 
         <p className="mt-6 text-base sm:text-lg text-slate-300 max-w-2xl leading-relaxed font-normal">
           The unified medical study portal designed for medical students and educators. 
-          Structured clinical notes and timed exam simulations with instant grading and zero lag.
+          Structured past university exam questions with model answers and timed exam simulations with instant grading and zero lag.
         </p>
 
         {/* Action Buttons */}
@@ -100,12 +100,12 @@ export default async function LandingPage() {
         {/* Feature Highlights Pills */}
         <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-3xl w-full">
           <div className="p-3 rounded-xl liquid-glass-subtle text-center">
-            <span className="block font-['Space_Grotesk'] text-lg font-bold text-white">15-Min</span>
-            <span className="text-[11px] text-slate-400">Timed Quizzes</span>
+            <span className="block font-['Space_Grotesk'] text-lg font-bold text-white">University</span>
+            <span className="text-[11px] text-slate-400">Past Questions</span>
           </div>
           <div className="p-3 rounded-xl liquid-glass-subtle text-center">
-            <span className="block font-['Space_Grotesk'] text-lg font-bold text-sky-300">0$ Egress</span>
-            <span className="text-[11px] text-slate-400">PDF Storage</span>
+            <span className="block font-['Space_Grotesk'] text-lg font-bold text-sky-300">Model Answers</span>
+            <span className="text-[11px] text-slate-400">Structured Points</span>
           </div>
           <div className="p-3 rounded-xl liquid-glass-subtle text-center">
             <span className="block font-['Space_Grotesk'] text-lg font-bold text-purple-300">Auto-Save</span>
@@ -125,26 +125,26 @@ export default async function LandingPage() {
             Built for Serious Medical Education
           </h2>
           <p className="text-slate-400 text-sm mt-2 max-w-xl mx-auto">
-            Everything medical students need to excel in clinical exams without bloated interfaces.
+            Everything medical students need to excel in university professional exams without bloated interfaces.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {/* Card 1: Notes Library */}
+          {/* Card 1: Medical College PYQ Bank */}
           <GlassCard className="p-6 sm:p-8 flex flex-col justify-between hover:border-white/20 transition-all duration-300">
             <div>
               <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(99,102,241,0.3)]">
-                <span className="material-symbols-outlined text-[26px]">library_books</span>
+                <span className="material-symbols-outlined text-[26px]">history_edu</span>
               </div>
               <h3 className="font-['Space_Grotesk'] text-xl font-bold text-white mb-2">
-                Structured Notes Library
+                Medical College PYQ Bank
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Hierarchical clinical syllabus organized by Subject &rarr; Chapter. Notes are delivered with private, short-lived presigned URLs for rapid, distraction-free study.
+                Hierarchical clinical syllabus organized by Subject &rarr; Chapter. Access past university exam long essays (LAQs), short notes (SAQs), and clinical cases with verified model answers.
               </p>
             </div>
             <div className="mt-6 pt-4 border-t border-white/[0.08]">
-              <span className="text-[11px] font-mono text-indigo-300">Direct S3 / R2 streaming</span>
+              <span className="text-[11px] font-mono text-indigo-300">High-yield university question bank</span>
             </div>
           </GlassCard>
 

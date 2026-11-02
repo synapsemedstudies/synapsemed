@@ -1,6 +1,6 @@
 import React from "react";
 import { requireAdmin } from "@/lib/auth";
-import { getSubjectsTree } from "@/actions/notes";
+import { getSubjectsTree } from "@/actions/pyq";
 import { QuizCreatorHub } from "@/components/quizzes/quiz-creator-hub";
 
 export default async function AdminNewQuizPage() {
